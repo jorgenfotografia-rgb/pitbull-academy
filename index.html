@@ -2,8 +2,9 @@
 <html lang="es">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
   <meta name="theme-color" content="#0b0c0d">
+  <meta name="academy-release" content="phase1-2026-09-15-1">
   <title>Pitbull Academy · Core V1.1 PRE-PILOT</title>
   <link rel="manifest" href="manifest.webmanifest">
   <link rel="icon" href="assets/icon-192.png">
@@ -21,6 +22,16 @@
 </section>
 
 <main class="app">
+  <aside id="updateStatus" class="runtime-status" role="status" hidden>
+    <p>Hay una actualización disponible. Tu progreso se guardará antes de abrirla.</p>
+    <button id="applyUpdate" class="tertiary" onclick="applyUpdate()">ACTUALIZAR</button>
+  </aside>
+  <aside id="storageStatus" class="runtime-status" role="status" hidden>
+    <p id="storageMessage"></p>
+    <button id="retryStorage" class="tertiary" onclick="retryPersistence()" hidden>REINTENTAR GUARDADO</button>
+    <button id="reloadStorage" class="tertiary" onclick="reloadSavedProgress()" hidden>CARGAR PROGRESO GUARDADO</button>
+    <button id="recoverStorage" class="tertiary" onclick="recoverStorage()" hidden>CREAR PROGRESO NUEVO</button>
+  </aside>
   <div class="topline">
     <div id="appcode" class="appcode">PITBULL ACADEMY</div>
     <div id="moduleMeter" class="module-meter" style="--p:0deg;visibility:hidden" aria-label="Progreso del módulo"><span id="moduleMeterText">0/6</span></div>
@@ -100,6 +111,7 @@
     <p id="mapMeta" class="eyebrow">SIMULADOR</p>
     <h2>Tu próximo cliente.</h2>
     <p class="muted">Los casos se desbloquean en orden. Los completados quedan disponibles para revisión.</p>
+    <div id="visualPilotNote" class="visual-pilot-note"><strong>VISUAL PILOT</strong><span>La misma referencia de Camila se usa temporalmente en todos los clientes para validar la experiencia visual.</span></div>
     <div id="clientList" class="cast"></div>
     <div class="actions"><button class="tertiary" onclick="show('home')"><span>SALIR DEL MÓDULO</span><span>←</span></button></div>
   </section>
@@ -125,11 +137,12 @@
 
   <section id="chat" class="screen" hidden>
     <div class="chat-head"><img id="chatAvatar" class="client-photo chat-photo" alt=""><div><strong id="chatName"></strong><span id="chatLabel"></span></div></div>
-    <div id="thread" class="thread"></div><div id="choices" class="choice-list"></div><button id="resolve" class="secondary resolve" onclick="openDecision()"></button>
+    <div id="thread" class="thread" role="log" aria-live="polite" aria-relevant="additions"></div><div id="choices" class="choice-list"></div><button id="resolve" class="secondary resolve" onclick="openDecision()"></button>
   </section>
 
   <section id="decision" class="screen" hidden>
     <p class="eyebrow">DECISIÓN</p><h2>¿Qué harías ahora?</h2><p class="muted">Elegí la acción que tomarías en el mostrador con lo que descubriste.</p>
+    <div id="decisionPerson" class="decision-person"><img id="decisionAvatar" class="client-photo decision-photo" alt=""><div><span>CLIENTE EN CURSO</span><strong id="decisionName"></strong><small id="decisionLabel"></small></div></div>
     <div id="decisionList" class="decision-list"></div>
     <div class="actions"><button class="tertiary" onclick="renderChat()"><span>VOLVER A LA CONVERSACIÓN</span><span>←</span></button></div>
   </section>
@@ -154,6 +167,9 @@
       <input id="pilotAlias" type="text" maxlength="40" autocomplete="name" placeholder="Ej. Vendedor 01">
       <p class="small">Usalo únicamente para identificar el resultado de esta prueba.</p>
       <button id="shareResult" class="secondary" onclick="sharePilotResult()"><span>COMPARTIR RESULTADO</span><span>↗</span></button>
+      <button id="copyResult" class="secondary" onclick="copyPilotResult()"><span>COPIAR RESULTADO</span><span>⧉</span></button>
+      <p id="copyStatus" class="copy-status" role="status"></p>
+      <div id="copyFallback" class="copy-fallback" hidden><label for="resultText">Resultado para copiar</label><textarea id="resultText" readonly></textarea></div>
     </div>
     <div class="actions"><button class="secondary" onclick="review()"><span>REVISAR TURNO</span><span>→</span></button><button class="tertiary" onclick="resetModule()"><span>REINICIAR MÓDULO</span><span>↻</span></button></div>
   </section>
@@ -167,8 +183,8 @@
 <script src="data/modules.js"></script>
 <script src="data/clients.js"></script>
 <script src="data/scenarios/m01.js"></script>
+<script src="data/scenarios/m01-legacy-adapter.js"></script>
 <script src="app.js"></script>
-<script src="reset-progress.js"></script>
 <script>
 (() => {
   let hiddenAt = 0;

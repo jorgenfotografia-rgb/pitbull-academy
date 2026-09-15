@@ -1,4 +1,7 @@
 (()=>{
+  // Compatibility only for pre-Phase-1 HTML still served by an older worker.
+  // Current index.html does not load this file. Never reset user progress here.
+  if(window.ACADEMY_PHASE1)return;
   window.ensureProgress=function(){
     const m=activeModule();
     if(!m)return blankModuleProgress();
@@ -37,11 +40,4 @@
     }finally{choiceBusy=false}
   };
 
-  const RESET_MARKER='pitbull-academy-training-reset-2026-09-13-02';
-  try{
-    if(localStorage.getItem(RESET_MARKER)!=='1'&&typeof resetModule==='function'){
-      resetModule();
-      localStorage.setItem(RESET_MARKER,'1');
-    }
-  }catch(e){}
 })();

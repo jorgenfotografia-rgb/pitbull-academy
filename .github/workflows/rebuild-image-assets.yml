@@ -26,23 +26,15 @@ jobs:
           cat asset-source/tiby-boss-review.*.b64 | tr -d '\n\r ' | base64 -d > assets/tiby-boss-review.webp
           file assets/glutamina.webp assets/tiby-boss-check.webp assets/tiby-boss-review.webp
 
-      - name: Point Academy to corrected assets
-        shell: bash
-        run: |
-          set -euo pipefail
-          sed -i 's/assets\/glutamina\.jpg/assets\/glutamina.webp/g' index.html data/module.js
-          sed -i "s/tiby-boss-check\.jpg/tiby-boss-check.webp/g; s/tiby-boss-review\.jpg/tiby-boss-review.webp/g" app.js
-          sed -i "s/pitbull-academy-qpass03-v2/pitbull-academy-assets-v1/g; s#\./assets/glutamina\.jpg#./assets/glutamina.webp#g; s#\./assets/tiby-boss-check\.jpg#./assets/tiby-boss-check.webp#g; s#\./assets/tiby-boss-review\.jpg#./assets/tiby-boss-review.webp#g" service-worker.js
-
-      - name: Commit corrected assets and references
+      - name: Commit rebuilt assets
         shell: bash
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add assets/glutamina.webp assets/tiby-boss-check.webp assets/tiby-boss-review.webp index.html app.js data/module.js service-worker.js
+          git add assets/glutamina.webp assets/tiby-boss-check.webp assets/tiby-boss-review.webp
           if git diff --cached --quiet; then
             echo "No asset changes to commit."
             exit 0
           fi
-          git commit -m "fix: use corrected Academy image assets"
+          git commit -m "fix: rebuild Academy image assets"
           git push

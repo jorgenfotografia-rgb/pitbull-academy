@@ -1,3 +1,5 @@
+window.ACADEMY_PHASE1=true;
+const RELEASE='phase1-2026-09-15-1';
 const BRANDS=window.BRANDS||[];
 const PRODUCTS=window.PRODUCTS||[];
 const MODULES=window.MODULES||[];
@@ -8,50 +10,171 @@ const KEY='pitbull-academy-quality-pass-01';
 const DEFAULT_MODULE_ID=(MODULES.find(m=>m.status==='active')||MODULES[0]||{}).id||null;
 const LEGACY_PROGRESS_KEYS=['current','completed','chat','node','discovered','rapport','results','bossCheck','pending','lostPending','startedAt','finishedAt'];
 
-const blankModuleProgress=()=>({current:0,completed:[],chat:[],node:'start',discovered:[],rapport:62,results:[],bossCheck:null,pending:null,lostPending:null,startedAt:null,finishedAt:null});
-const fresh=()=>({view:'home',selectedModule:DEFAULT_MODULE_ID,selectedProduct:'glutamina-300g',catalogBrand:'all',pilotAlias:'',moduleProgress:{}});
-
+const blankModuleProgress=()=>({current:0,completed:[],chat:[],node:'start',discovered:[],rapport:62,results:[],bossCheck:null,pending:null,lostPending:null,startedAt:null,finishedAt:null,revision:0});
+const SCHEMA_VERSION=1;
+const BACKUP_KEY=KEY+'-before-phase1';
+const RECOVERY_KEY=KEY+'-recovery';
+const persistence={lastStored:null,issue:null};
+const fresh=()=>({schemaVersion:SCHEMA_VERSION,storageRevision:0,view:'home',selectedModule:DEFAULT_MODULE_ID,selectedProduct:'glutamina-300g',catalogBrand:'all',pilotAlias:'',moduleProgress:{}});
+const record=x=>x!==null&&typeof x==='object'&&!Array.isArray(x);
+const list=x=>Array.isArray(x)?x:[];
+const validScores=x=>record(x)&&['listen','criterion','conversation','recommendation'].every(k=>Number.isFinite(x[k])&&x[k]>=0&&x[k]<=100);
 function uniqueResults(results=[]){
   const byCase=new Map();
-  results.forEach(r=>{if(r&&Number.isInteger(r.i))byCase.set(r.i,r)});
+  list(results).forEach(r=>{if(r&&Number.isInteger(r.i))byCase.set(r.i,r)});
   return [...byCase.values()].sort((a,b)=>a.i-b.i);
 }
-function normalizeProgress(input={}){
-  const p=Object.assign(blankModuleProgress(),input||{});
-  p.completed=[...new Set((p.completed||[]).filter(Number.isInteger))].sort((a,b)=>a-b);
-  p.results=uniqueResults(p.results||[]);
-  p.chat=Array.isArray(p.chat)?p.chat:[];
-  p.discovered=[...new Set(Array.isArray(p.discovered)?p.discovered:[])];
+function normalizeProgress(input={},moduleId=DEFAULT_MODULE_ID){
+  const source=record(input)?input:{},p={...blankModuleProgress(),...source};
+  const m=MODULES.find(m=>m.id===moduleId),scenario=SCENARIOS[m?.scenarioId],clients=scenario?.clients||[];
+  const validIndex=i=>Number.isInteger(i)&&i>=0&&i<clients.length;
+  const validAction=a=>a==='LOST'||m?.decisionActions?.some(x=>x.id===a);
+  p.results=uniqueResults(list(p.results).filter(r=>record(r)&&validIndex(r.i)&&validAction(r.action)&&validScores(r.scores)))
+    .map(r=>({...r,name:clients[r.i].name,correct:!!r.correct}));
+  // A completion without its result cannot be reconstructed without inventing a score.
+  p.completed=p.results.map(r=>r.i);
+  const validCurrent=validIndex(p.current);
+  p.current=validCurrent?p.current:Math.max(0,clients.findIndex((c,i)=>!p.completed.includes(i)));
+  p.chat=list(p.chat).filter(x=>record(x)&&['you','client'].includes(x.who)&&typeof x.text==='string'&&(x.q===undefined||Number.isFinite(x.q)));
+  const c=clients[p.current];
+  p.discovered=[...new Set(list(p.discovered).filter(f=>typeof f==='string'&&c?.facts.includes(f)))];
+  p.rapport=Number.isFinite(p.rapport)?Math.max(0,Math.min(100,p.rapport)):62;
+  p.revision=Number.isSafeInteger(p.revision)&&p.revision>=0?p.revision:0;
+  p.bossCheck=Number.isInteger(p.bossCheck)&&scenario?.bossCheck?.options[p.bossCheck]?p.bossCheck:null;
+  p.startedAt=Number.isFinite(p.startedAt)&&p.startedAt>0?p.startedAt:null;
+  p.finishedAt=Number.isFinite(p.finishedAt)&&p.finishedAt>0&&p.completed.length===clients.length?p.finishedAt:null;
+  const pending=p.pending;
+  p.pending=record(pending)&&validAction(pending.action)&&pending.action!=='ASK_MORE'&&pending.action!=='LOST'&&validScores(pending.sc)
+    &&['good','mid','bad'].includes(pending.strength)&&['title','note','copy'].every(k=>typeof pending[k]==='string')
+    ?{...pending,unlockAt:Number.isFinite(pending.unlockAt)?pending.unlockAt:0}:null;
+  p.lostPending=record(p.lostPending)&&validScores(p.lostPending.scores)?p.lostPending:null;
+  if(p.pending)p.lostPending=null;
+  if(p.completed.includes(p.current)){p.pending=null;p.lostPending=null}
+  if(!validCurrent||!c||!(p.node==='end'||Object.hasOwn(c.nodes,p.node))){
+    p.node='start';p.chat=[];p.discovered=[];p.rapport=62;p.pending=null;p.lostPending=null;
+  }
+  // Never silently reconstruct a broken conversation's scoring from prose.
+  if(p.chat.some(x=>x.who==='you')===false&&p.node!=='start'&&!p.pending&&!p.lostPending){
+    p.node='start';p.discovered=[];p.rapport=62;
+  }
   return p;
 }
-function progressWeight(p={}){
-  const n=normalizeProgress(p);
-  return n.completed.length*1000+n.results.length*100+(n.chat?.length||0)*2+(n.pending||n.lostPending?5:0);
-}
-function legacyProgress(raw={}){
-  const hasLegacy=LEGACY_PROGRESS_KEYS.some(k=>Object.prototype.hasOwnProperty.call(raw,k));
-  if(!hasLegacy)return null;
-  return normalizeProgress(Object.fromEntries(LEGACY_PROGRESS_KEYS.filter(k=>Object.prototype.hasOwnProperty.call(raw,k)).map(k=>[k,raw[k]])));
-}
+function hasActivity(p){return record(p)&&(list(p.completed).length||list(p.results).length||list(p.chat).length||p.pending||p.lostPending||p.startedAt)}
 function migrate(raw={}){
-  const next=Object.assign(fresh(),raw||{});
-  next.moduleProgress=next.moduleProgress||{};
-  if(DEFAULT_MODULE_ID){
-    const currentProgress=normalizeProgress(next.moduleProgress[DEFAULT_MODULE_ID]||{});
-    const legacy=legacyProgress(raw);
-    next.moduleProgress[DEFAULT_MODULE_ID]=legacy&&progressWeight(legacy)>progressWeight(currentProgress)?legacy:currentProgress;
+  if(!record(raw))throw new Error('invalid storage record');
+  if(raw.schemaVersion!==undefined&&raw.schemaVersion!==SCHEMA_VERSION)throw new Error('unsupported schema');
+  const next={...fresh(),...raw,schemaVersion:SCHEMA_VERSION};
+  next.moduleProgress=record(raw.moduleProgress)?{...raw.moduleProgress}:{};
+  if(raw.schemaVersion===undefined&&DEFAULT_MODULE_ID){
+    const legacy=Object.fromEntries(LEGACY_PROGRESS_KEYS.filter(k=>Object.hasOwn(raw,k)).map(k=>[k,raw[k]]));
+    const scoped=next.moduleProgress[DEFAULT_MODULE_ID];
+    // An existing active module record is authoritative; never rank two divergent sessions by length.
+    next.moduleProgress[DEFAULT_MODULE_ID]=hasActivity(scoped)?scoped:hasActivity(legacy)?legacy:scoped||{};
   }
   LEGACY_PROGRESS_KEYS.forEach(k=>{delete next[k]});
-  Object.keys(next.moduleProgress).forEach(id=>{next.moduleProgress[id]=normalizeProgress(next.moduleProgress[id])});
-  if(!next.selectedModule)next.selectedModule=DEFAULT_MODULE_ID;
+  for(const m of MODULES)next.moduleProgress[m.id]=normalizeProgress(next.moduleProgress[m.id],m.id);
+  if(!MODULES.some(m=>m.id===next.selectedModule))next.selectedModule=DEFAULT_MODULE_ID;
+  if(!PRODUCTS.some(p=>p.id===next.selectedProduct))next.selectedProduct=PRODUCTS[0]?.id||null;
   if(typeof next.pilotAlias!=='string')next.pilotAlias='';
+  if(typeof next.catalogBrand!=='string')next.catalogBrand='all';
+  if(!['home','module','map','catalog','product','case','caseReview','chat','decision','reaction','bossCheck','final','review'].includes(next.view))next.view='home';
+  next.storageRevision=Number.isSafeInteger(next.storageRevision)&&next.storageRevision>=0?next.storageRevision:0;
   return next;
 }
-function load(){try{return migrate(JSON.parse(localStorage.getItem(KEY)||'{}'))}catch(e){return fresh()}}
+function keepOriginal(raw,key){
+  if(raw!==null&&localStorage.getItem(key)===null)localStorage.setItem(key,raw);
+}
+function load(){
+  let raw=null;
+  try{raw=localStorage.getItem(KEY);persistence.lastStored=raw}catch(e){persistence.issue='read';return fresh()}
+  if(raw===null)return migrate({});
+  let parsed;
+  try{parsed=JSON.parse(raw);if(!record(parsed))throw new Error('invalid record')}
+  catch(e){persistence.issue='corrupt';return migrate({})}
+  if(parsed.schemaVersion!==undefined&&parsed.schemaVersion!==SCHEMA_VERSION){persistence.issue='future';return migrate({})}
+  const next=migrate(parsed);
+  // Preserve the exact original before any version conversion or structural repair.
+  if(JSON.stringify(next)!==JSON.stringify(parsed)){
+    try{keepOriginal(raw,parsed.schemaVersion===undefined?BACKUP_KEY:RECOVERY_KEY)}
+    catch(e){persistence.issue='backup'}
+  }
+  return next;
+}
 let S=load();
-function save(){localStorage.setItem(KEY,JSON.stringify(S))}
-function reset(){localStorage.removeItem(KEY);S=fresh();ensureProgress();render()}
-function resetModule(){const m=activeModule();if(!m)return;S.moduleProgress[m.id]=blankModuleProgress();S.view='home';save();render()}
+let actionEpoch=0;
+let choiceLockedUntil=0;
+let reviewedCase=null;
+function actionToken(view=S.view){return `${actionEpoch}:${S.selectedModule}:${MP().current}:${MP().revision||0}:${MP().node}:${view}`}
+function acceptsAction(token,view){return !['corrupt','future','conflict','read','backup'].includes(persistence.issue)&&S.view===view&&token===actionToken(view)}
+function changed(p=MP()){p.revision=(p.revision||0)+1}
+function moduleComplete(p=MP()){return C().length>0&&C().every((c,i)=>p.completed.includes(i)&&p.results.some(r=>r.i===i))}
+function nextCaseIndex(p=MP()){return C().findIndex((c,i)=>!p.completed.includes(i))}
+function canStartCase(i,p=MP()){return Number.isInteger(i)&&i===nextCaseIndex(p)}
+function persistenceStatus(){
+  const box=el('storageStatus');if(!box)return;
+  const issue=persistence.issue;box.hidden=!issue;
+  const messages={
+    read:'No pudimos leer tu progreso. La sesión sigue abierta; reintentá antes de cerrar.',
+    write:'No pudimos guardar el último cambio. La sesión sigue abierta; reintentá antes de cerrar.',
+    backup:'No pudimos respaldar tu progreso anterior. No se sobrescribió el guardado.',
+    corrupt:'El progreso guardado necesita recuperación. Conservamos el original sin sobrescribirlo.',
+    future:'Este progreso pertenece a otra versión. No se sobrescribió el guardado.',
+    conflict:'El progreso cambió en otra pestaña. Cargá ese guardado para continuar sin sobrescribirlo.'
+  };
+  el('storageMessage').textContent=messages[issue]||'';
+  el('retryStorage').hidden=!['read','write','backup'].includes(issue);
+  el('reloadStorage').hidden=issue!=='conflict';
+  el('recoverStorage').hidden=issue!=='corrupt';
+}
+function save(){
+  if(persistence.issue&&persistence.issue!=='write'){persistenceStatus();return false}
+  try{
+    if(localStorage.getItem(KEY)!==persistence.lastStored){persistence.issue='conflict';persistenceStatus();return false}
+    if(JSON.stringify(S)===persistence.lastStored){persistence.issue=null;persistenceStatus();return true}
+    const previous=S.storageRevision||0;S.storageRevision=previous+1;
+    try{const serialized=JSON.stringify(S);localStorage.setItem(KEY,serialized);persistence.lastStored=serialized}
+    catch(e){S.storageRevision=previous;throw e}
+    persistence.issue=null;persistenceStatus();return true;
+  }catch(e){persistence.issue='write';persistenceStatus();return false}
+}
+function retryPersistence(){
+  const issue=persistence.issue;
+  if(issue==='read'){
+    if(!window.confirm('Se volverá a cargar el progreso guardado. Los cambios de esta sesión que no se pudieron guardar se descartarán. ¿Continuar?'))return;
+    persistence.issue=null;S=load();actionEpoch++;render();return;
+  }
+  if(issue==='backup'){
+    try{
+      const raw=localStorage.getItem(KEY);
+      if(raw!==persistence.lastStored){persistence.issue='conflict';persistenceStatus();return}
+      keepOriginal(raw,JSON.parse(raw).schemaVersion===undefined?BACKUP_KEY:RECOVERY_KEY);
+    }catch(e){persistenceStatus();return}
+  }
+  if(['write','backup'].includes(issue)){persistence.issue=null;save()}
+}
+function reloadSavedProgress(){
+  if(window.confirm('Se cargará el progreso de la otra pestaña. Los cambios locales que no se guardaron se descartarán. ¿Continuar?'))window.location.reload();
+}
+function recoverStorage(){
+  if(persistence.issue!=='corrupt'||!window.confirm('¿Crear un progreso nuevo? Primero conservaremos una copia del guardado que no se pudo leer.'))return;
+  try{
+    const raw=localStorage.getItem(KEY);
+    if(raw!==persistence.lastStored){persistence.issue='conflict';persistenceStatus();return}
+    // Keep each explicitly replaced malformed record, even if an older recovery exists.
+    const key=localStorage.getItem(RECOVERY_KEY)===null?RECOVERY_KEY:RECOVERY_KEY+'-'+Date.now();
+    localStorage.setItem(key,raw);
+    persistence.issue=null;S=migrate({});actionEpoch++;save();render();
+  }catch(e){persistence.issue='corrupt';persistenceStatus()}
+}
+function reset(){
+  if(persistence.issue){persistenceStatus();return}
+  S=migrate({});actionEpoch++;choiceLockedUntil=0;save();render();
+}
+function resetModule(){
+  const m=activeModule();if(!m)return;
+  if(persistence.issue){persistenceStatus();return}
+  S.moduleProgress[m.id]=blankModuleProgress();actionEpoch++;choiceLockedUntil=0;S.view='home';save();render();
+}
 function tap(){try{navigator.vibrate&&navigator.vibrate(8)}catch(e){}}
 function el(id){return document.getElementById(id)}
 function brandById(id){return BRANDS.find(b=>b.id===id)}
@@ -59,13 +182,14 @@ function productById(id){return PRODUCTS.find(p=>p.id===id)}
 function moduleById(id){return MODULES.find(m=>m.id===id)}
 function activeModule(){return moduleById(S.selectedModule)||moduleById(DEFAULT_MODULE_ID)||MODULES[0]}
 function activeScenario(){const m=activeModule();return m?SCENARIOS[m.scenarioId]:null}
-function ensureProgress(){const m=activeModule();if(!m)return blankModuleProgress();if(!S.moduleProgress[m.id])S.moduleProgress[m.id]=blankModuleProgress();S.moduleProgress[m.id]=normalizeProgress(S.moduleProgress[m.id]);return S.moduleProgress[m.id]}
+function ensureProgress(){const m=activeModule();if(!m)return blankModuleProgress();if(!S.moduleProgress[m.id])S.moduleProgress[m.id]=blankModuleProgress();return S.moduleProgress[m.id]}
 function MP(){return ensureProgress()}
 function C(){return activeScenario()?.clients||[]}
 function current(){return C()[MP().current]}
 function selectedProduct(){return productById(S.selectedProduct)||PRODUCTS[0]}
 function discoveredSet(){return new Set(MP().discovered||[])}
-function setPhoto(id,c){const node=el(id);if(!node||!c)return;node.src=A(`${c.id}.svg`);node.alt=c.name}
+function clientVisual(c,kind='face'){return c?.visual?.[kind]||c?.visual?.face||A(`${c.id}.svg`)}
+function setPhoto(id,c,kind='face'){const node=el(id);if(!node||!c)return;node.src=clientVisual(c,kind);node.alt=c.visual?`${c.name} · referencia visual piloto`:c.name}
 function productModules(p){return (p.moduleIds||[]).map(moduleById).filter(Boolean)}
 function modulePrimaryProduct(m=activeModule()){return productById((m?.productIds||[])[0])}
 function brandCount(){return new Set(PRODUCTS.map(p=>p.brandId).filter(Boolean)).size}
@@ -107,7 +231,7 @@ function resumeView(){
   if(v==='home'||v==='module'||v==='map'||v==='catalog'){if(v==='catalog')renderCatalog();if(v==='module')renderModule();show(v,{scroll:false});return}
   if(v==='product'){renderProduct(false);return}
   if(v==='case'){renderCase(false);return}
-  if(v==='caseReview'){reviewCompletedCase(MP().current,{scroll:false});return}
+  if(v==='caseReview'){reviewCompletedCase(Number.isInteger(S.reviewedCase)?S.reviewedCase:MP().current,{scroll:false});return}
   if(v==='chat'&&MP().chat?.length){renderChat({scroll:false});return}
   if(v==='decision'){renderDecision();show('decision',{scroll:false});return}
   if(v==='reaction'){if(MP().pending){renderReaction({scroll:false});return}if(MP().lostPending){renderLostReaction({scroll:false});return}}
@@ -121,7 +245,7 @@ function openModule(){tap();renderModule();show('module')}
 function resumeModuleFromHome(){
   tap();
   const p=MP(),total=C().length;
-  if(total&&p.completed.length>=total&&p.results.length){final();return}
+  if(moduleComplete(p)){final();return}
   if(p.pending){renderReaction();return}
   if(p.lostPending){renderLostReaction();return}
   if(p.chat.length&&!p.completed.includes(p.current)){renderChat();return}
@@ -200,25 +324,32 @@ function renderMap(){
   const m=activeModule(),clients=C(),p=MP();if(!m||!el('clientList'))return;updateMeter();
   el('mapMeta').textContent=`SIMULADOR · ${clients.length} CASOS`;
   el('clientList').innerHTML=clients.map((c,i)=>{
-    const done=p.completed.includes(i),unlocked=i<=p.completed.length;
+    const done=p.completed.includes(i),unlocked=done||canStartCase(i,p);
     const action=done?`reviewCompletedCase(${i})`:`startClient(${i})`;
     return `<button class="cast-item ${done?'is-complete':''}" ${unlocked?'':'disabled'} onclick="${action}">
-      <img class="client-photo" src="${A(c.id+'.svg')}" alt="${c.name}">
-      <div><span class="num">${String(i+1).padStart(2,'0')} · ${done?'COMPLETADO':'CLIENTE'}</span><strong>${c.name}</strong><span class="small">${c.label}${done?' · Revisar caso':c.bossChallenge?' · Boss Challenge':''}</span></div>
+      <img class="client-photo" src="${clientVisual(c,'face')}" alt="${c.name} · referencia visual piloto">
+      <div><span class="num">${String(i+1).padStart(2,'0')} · ${done?'COMPLETADO':'CLIENTE'}</span><strong>${c.name}</strong><span class="small">${c.label}${!done&&c.bossChallenge?' · Boss Challenge':''}</span>${done?'<span class="review-tag">REVISAR CASO</span>':''}</div>
       <span class="arrow">${done?'✓':unlocked?'→':'·'}</span>
     </button>`;
   }).join('');
 }
 function startClient(i){
-  tap();const p=MP();
+  const p=MP();
   if(p.completed.includes(i)){reviewCompletedCase(i);return}
+  if(!canStartCase(i,p))return;
+  tap();
+  if(p.current===i&&(p.chat.length||p.pending||p.lostPending)){
+    if(p.pending)renderReaction();else if(p.lostPending)renderLostReaction();else renderChat();
+    return;
+  }
   if(!p.startedAt)p.startedAt=Date.now();
-  p.current=i;p.chat=[];p.node='start';p.discovered=[];p.rapport=62;p.pending=null;p.lostPending=null;save();renderCase(true);
+  p.current=i;p.chat=[];p.node='start';p.discovered=[];p.rapport=62;p.pending=null;p.lostPending=null;
+  actionEpoch++;changed(p);save();renderCase(true);
 }
 function caseResult(i){return uniqueResults(MP().results).find(r=>r.i===i)}
 function reviewCompletedCase(i,{scroll=true}={}){
   const p=MP(),c=C()[i],result=caseResult(i);if(!c||!p.completed.includes(i)){renderMap();show('map',{scroll});return}
-  p.current=i;save();setPhoto('caseReviewAvatar',c);
+  reviewedCase=i;S.reviewedCase=i;save();setPhoto('caseReviewAvatar',c);
   el('caseReviewNum').textContent=`CASO ${String(i+1).padStart(2,'0')} · COMPLETADO`;
   el('caseReviewName').textContent=c.name;
   el('caseReviewLabel').textContent=c.label;
@@ -231,40 +362,99 @@ function reviewCompletedCase(i,{scroll=true}={}){
   show('caseReview',{scroll});
 }
 function renderCase(scroll=true){const p=MP(),c=current(),total=C().length,n=p.current+1;if(!c){renderMap();show('map',{scroll});return}setPhoto('caseAvatar',c);el('caseNum').textContent=`CASO ${String(n).padStart(2,'0')} DE ${String(total).padStart(2,'0')}`;el('caseName').textContent=c.name;el('caseAge').textContent=c.age;el('caseLabel').textContent=c.label;el('caseQuote').textContent=`“${c.intro}”`;show('case',{scroll})}
-function beginChat(){tap();const p=MP(),c=current();if(!p.chat.length)p.chat=[{who:'client',text:c.intro}];save();renderChat()}
+function beginChat(){if(S.view!=='case')return;const p=MP(),c=current();if(!c||p.completed.includes(p.current))return;tap();if(!p.chat.length){p.chat=[{who:'client',text:c.intro}];changed(p)}save();renderChat()}
 function rtxt(q){if(q>=8)return['La conversación gana confianza.','good'];if(q<=-15)return['La conversación se enfría.','bad'];if(q<0)return['La pregunta llega algo pronto.','bad'];return['La conversación continúa.','']}
 function followConversation(){requestAnimationFrame(()=>{const bubbles=[...el('thread').querySelectorAll('.bubble')],last=bubbles[bubbles.length-1];if(last)last.scrollIntoView({behavior:'smooth',block:'center'})})}
 function renderChat({scroll=true,follow=false}={}){
   const p=MP(),c=current();setPhoto('chatAvatar',c);el('chatName').textContent=c.name;el('chatLabel').textContent=c.label;
   el('thread').innerHTML=p.chat.map(m=>{const rx=m.q!==undefined?rtxt(m.q):null;return `<div class="bubble ${m.who==='client'?'client':'you'}">${m.text}</div>${rx?`<div class="reaction ${rx[1]}">${rx[0]}</div>`:''}`}).join('');
-  const opts=c.nodes[p.node]||[];el('choices').innerHTML=opts.map((o,i)=>`<button class="choice" onclick="chooseLine(${i})">${o.t}</button>`).join('');
+  const opts=c.nodes[p.node]||[];el('choices').innerHTML=opts.map((o,i)=>`<button class="choice" data-intervention="${p.node}:${i}" onclick="chooseLine('${p.node}:${i}','${actionToken('chat')}')">${o.t}</button>`).join('');
   const turns=p.chat.filter(x=>x.who==='you').length,ready=turns>=2;el('resolve').className=(ready?'primary':'secondary')+' resolve';el('resolve').innerHTML=`<span>${ready?'TOMAR DECISIÓN':'RESOLVER AHORA'}</span><span>→</span>`;save();show('chat',{scroll});if(follow)followConversation();
 }
-function chooseLine(i){tap();const p=MP(),c=current(),o=c.nodes[p.node][i],d=discoveredSet();p.chat.push({who:'you',text:o.t});p.chat.push({who:'client',text:o.r,q:o.q});o.facts.forEach(f=>d.add(f));p.discovered=[...d];p.rapport=Math.max(0,Math.min(100,p.rapport+o.q));p.node=o.next;save();if(p.rapport<22){lost();return}renderChat({scroll:false,follow:true})}
-function actionLabel(a){const prod=modulePrimaryProduct();if(a.labelFromProduct&&prod){const base=prod.shortName?.toUpperCase()||prod.name.toUpperCase();return `${a.prefix||''}${base}`.trim()}return a.label}
-function renderDecision(){const m=activeModule();el('decisionList').innerHTML=(m.decisionActions||[]).map(a=>`<button class="decision" onclick="decide('${a.id}')"><b>${actionLabel(a)}</b><span>${a.hint}</span></button>`).join('')}
-function openDecision(){tap();renderDecision();show('decision')}
-function calc(action){const p=MP(),c=current(),d=discoveredSet(),listen=Math.min(100,Math.round([...d].filter(x=>c.facts.includes(x)).length/Math.max(1,c.facts.length)*100));return{listen,criterion:action===c.answer?100:(action==='ASK_MORE'&&listen<67?78:35),conversation:p.rapport,recommendation:action===c.answer?100:(action==='ASK_MORE'&&listen<67?75:30)}}
-function decide(action){
-  tap();const p=MP(),c=current(),sc=calc(action),correct=action===c.answer,enough=sc.listen>=67;let strength,title,note,copy;
-  if(correct&&enough&&sc.conversation>=55){strength='good';title='Buena lectura';note='La acción coincide con el contexto que construiste.';copy=c.reaction.good}
-  else if(correct&&!enough){strength='mid';title='Buena dirección, demasiado pronto';note='La acción puede tener sentido, pero todavía faltaba contexto.';copy=c.reaction.early}
-  else if(action==='ASK_MORE'&&!enough){strength='mid';title='Buena pausa';note='Reconociste que todavía faltaba información.';copy=c.reaction.early}
-  else{strength='bad';title='Revisá la lectura';note='La acción no responde bien al objetivo que venía mostrando.';copy=c.reaction.bad}
-  p.pending={action,sc,correct,strength,title,note,copy};p.lostPending=null;save();renderReaction();
+function chooseLine(interventionId,token){
+  if(!acceptsAction(token,'chat')||Date.now()<choiceLockedUntil)return;
+  const p=MP(),c=current();if(!c||p.completed.includes(p.current)||p.pending||p.lostPending)return;
+  const [node,index]=String(interventionId).split(':');
+  if(node!==p.node||!/^\d+$/.test(index))return;
+  const o=c.nodes?.[node]?.[Number(index)];if(!o)return;
+  const key=(o.t||'').trim();
+  if(p.chat.some(m=>m.who==='you'&&(m.text||'').trim()===key))return;
+  tap();choiceLockedUntil=Date.now()+300;
+  const d=new Set(p.discovered);
+  p.chat.push({who:'you',text:o.t},{who:'client',text:o.r,q:o.q});
+  (o.facts||[]).forEach(f=>d.add(f));p.discovered=[...d];
+  p.rapport=Math.max(0,Math.min(100,p.rapport+o.q));p.node=o.next||node;
+  changed(p);save();
+  if(p.rapport<22){lost();return}
+  renderChat({scroll:false,follow:true});
 }
-function renderReaction({scroll=true}={}){const p=MP(),c=current(),o=p.pending;if(!o){renderMap();show('map',{scroll});return}setPhoto('reactAvatar',c);el('reactName').textContent=c.name;el('clientLine').textContent=`“${o.copy}”`;el('learning').className=`learning ${o.strength}`;el('resultTitle').textContent=o.title;el('resultNote').textContent=o.note;el('learnText').textContent=c.explain;el('reactionNext').onclick=commit;show('reaction',{scroll})}
+function actionLabel(a){const prod=modulePrimaryProduct();if(a.labelFromProduct&&prod){const base=prod.shortName?.toUpperCase()||prod.name.toUpperCase();return `${a.prefix||''}${base}`.trim()}return a.label}
+function renderDecision(){
+  const m=activeModule(),c=current();
+  if(c){setPhoto('decisionAvatar',c);el('decisionName').textContent=c.name;el('decisionLabel').textContent=c.label}
+  el('decisionList').innerHTML=(m.decisionActions||[]).map(a=>`<button type="button" class="decision" onclick="decide('${a.id}','${actionToken('decision')}')"><b>${actionLabel(a)}</b><span>${a.hint}</span></button>`).join('');
+}
+function openDecision(){if(S.view!=='chat'||MP().pending||MP().lostPending||MP().completed.includes(MP().current))return;tap();renderDecision();show('decision')}
+function calc(action){const p=MP(),c=current(),d=discoveredSet(),listen=Math.min(100,Math.round([...d].filter(x=>c.facts.includes(x)).length/Math.max(1,c.facts.length)*100));return{listen,criterion:action===c.answer?100:(action==='ASK_MORE'&&listen<67?78:35),conversation:p.rapport,recommendation:action===c.answer?100:(action==='ASK_MORE'&&listen<67?75:30)}}
+function decide(action,token){
+  if(!acceptsAction(token,'decision'))return;
+  const p=MP(),c=current();if(!c||p.pending||p.lostPending||p.completed.includes(p.current))return;
+  if(!activeModule().decisionActions.some(a=>a.id===action))return;
+  tap();
+  if(action==='ASK_MORE'){changed(p);renderChat();return}
+  const adapter=window.LEGACY_SCENARIO_ADAPTERS?.[activeScenario().compatibilityAdapter];
+  if(!adapter)throw new Error('Missing legacy scenario compatibility adapter');
+  const outcome=adapter.decision({action,client:c,scores:calc(action),turns:p.chat.filter(x=>x.who==='you').length});
+  p.pending={...outcome,unlockAt:Date.now()+(activeScenario().consequenceDelayMs||0)};
+  p.lostPending=null;changed(p);save();renderReaction();
+}
+function renderReaction({scroll=true}={}){
+  const p=MP(),c=current(),o=p.pending;if(!o){renderMap();show('map',{scroll});return}
+  setPhoto('reactAvatar',c,'reaction');el('reactName').textContent=c.name;
+  el('clientLine').textContent=`“${o.copy}”`;el('learning').className=`learning ${o.strength}`;
+  el('resultTitle').textContent=o.title;el('resultNote').textContent=o.note;el('learnText').textContent=c.explain;
+  const next=el('reactionNext'),token=actionToken('reaction');next.disabled=true;
+  next.onclick=()=>commit(token);
+  show('reaction',{scroll});
+  const wait=Math.max(0,(o.unlockAt||0)-Date.now());
+  window.setTimeout(()=>{if(S.view==='reaction'&&MP().pending===o&&actionToken('reaction')===token)next.disabled=false},wait);
+}
 function upsertResult(result){const p=MP();p.results=uniqueResults([...(p.results||[]).filter(r=>r.i!==result.i),result])}
-function commit(){tap();const p=MP(),c=current(),o=p.pending;if(!o)return;upsertResult({i:p.current,name:c.name,action:o.action,correct:o.correct,scores:o.sc});if(!p.completed.includes(p.current))p.completed.push(p.current);p.completed=[...new Set(p.completed)].sort((a,b)=>a-b);p.pending=null;p.lostPending=null;save();updateMeter();const scenario=activeScenario();if(p.current===scenario.bossCheck?.afterCaseIndex&&p.bossCheck===null){renderBossCheck();return}if(p.current===C().length-1){final();return}renderMap();show('map')}
-function lost(){const p=MP(),sc=calc('LOST');p.lostPending={scores:sc};p.pending=null;save();renderLostReaction()}
-function renderLostReaction({scroll=true}={}){const c=current();setPhoto('reactAvatar',c);el('reactName').textContent=c.name;el('clientLine').textContent='“Lo voy a pensar. Gracias.”';el('learning').className='learning bad';el('resultTitle').textContent='Cliente perdido';el('resultNote').textContent='La conversación se volvió comercial antes de que el cliente sintiera que estabas intentando entenderlo.';el('learnText').textContent='La calidad de una recomendación también depende de cómo construís confianza.';el('reactionNext').onclick=commitLost;show('reaction',{scroll})}
-function commitLost(){tap();const p=MP(),c=current(),lp=p.lostPending;if(!lp)return;upsertResult({i:p.current,name:c.name,action:'LOST',correct:false,scores:lp.scores});if(!p.completed.includes(p.current))p.completed.push(p.current);p.completed=[...new Set(p.completed)].sort((a,b)=>a-b);p.lostPending=null;save();updateMeter();const scenario=activeScenario();if(p.current===scenario.bossCheck?.afterCaseIndex&&p.bossCheck===null){renderBossCheck();return}if(p.current===C().length-1){final();return}renderMap();show('map')}
+function completeCase(result,p){
+  upsertResult(result);p.completed=[...new Set([...p.completed,p.current])].sort((a,b)=>a-b);
+  p.pending=null;p.lostPending=null;changed(p);
+  if(moduleComplete(p)&&!p.finishedAt)p.finishedAt=Date.now();
+  save();updateMeter();
+  if(p.current===activeScenario().bossCheck?.afterCaseIndex&&p.bossCheck===null){renderBossCheck();return}
+  if(moduleComplete(p)){final();return}
+  renderMap();show('map');
+}
+function commit(token){
+  if(!acceptsAction(token,'reaction'))return;
+  const p=MP(),c=current(),o=p.pending;
+  if(!o||p.completed.includes(p.current)||Date.now()<(o.unlockAt||0))return;
+  tap();completeCase({i:p.current,name:c.name,action:o.action,correct:o.correct,scores:o.sc},p);
+}
+function lost(){const p=MP();p.lostPending={scores:calc('LOST')};p.pending=null;changed(p);save();renderLostReaction()}
+function renderLostReaction({scroll=true}={}){
+  const c=current();setPhoto('reactAvatar',c);el('reactName').textContent=c.name;
+  el('clientLine').textContent='“Lo voy a pensar. Gracias.”';el('learning').className='learning bad';
+  el('resultTitle').textContent='Cliente perdido';
+  el('resultNote').textContent='La conversación se volvió comercial antes de que el cliente sintiera que estabas intentando entenderlo.';
+  el('learnText').textContent='La calidad de una recomendación también depende de cómo construís confianza.';
+  const next=el('reactionNext'),token=actionToken('reaction');next.disabled=false;next.onclick=()=>commitLost(token);show('reaction',{scroll});
+}
+function commitLost(token){
+  if(!acceptsAction(token,'reaction'))return;
+  const p=MP(),c=current(),lp=p.lostPending;if(!lp||p.completed.includes(p.current))return;
+  tap();completeCase({i:p.current,name:c.name,action:'LOST',correct:false,scores:lp.scores},p);
+}
 function renderBossCheck({scroll=true}={}){
   const p=MP(),bc=activeScenario()?.bossCheck;if(!bc){renderMap();show('map',{scroll});return}
-  if(p.bossCheck===null){el('bossCheckBody').innerHTML=`<div class="boss-hero"><img src="${A(bc.image)}" alt="Tiby The Boss"><div class="boss-copy"><p class="eyebrow">THE BOSS CHECK</p><h2>${bc.title}</h2><p class="lead">“${bc.prompt}”</p><div class="choice-list">${bc.options.map((o,i)=>`<button class="choice" onclick="bossAnswer(${i})">${o.text}</button>`).join('')}</div><div class="signature">TIBY · THE BOSS</div></div></div>`}else{renderBossCheckResult(p.bossCheck)}show('bossCheck',{scroll});
+  if(p.bossCheck===null){el('bossCheckBody').innerHTML=`<div class="boss-hero"><img src="${A(bc.image)}" alt="Tiby The Boss"><div class="boss-copy"><p class="eyebrow">THE BOSS CHECK</p><h2>${bc.title}</h2><p class="lead">“${bc.prompt}”</p><div class="choice-list">${bc.options.map((o,i)=>`<button class="choice" onclick="bossAnswer(${i},'${actionToken('bossCheck')}')">${o.text}</button>`).join('')}</div><div class="signature">TIBY · THE BOSS</div></div></div>`}else{renderBossCheckResult(p.bossCheck)}show('bossCheck',{scroll});
 }
 function renderBossCheckResult(index){const bc=activeScenario().bossCheck,ok=bc.options[index]?.correct;el('bossCheckBody').innerHTML=`<div class="boss-hero"><img src="${A(bc.image)}" alt="Tiby The Boss"><div class="boss-copy"><p class="eyebrow">THE BOSS CHECK</p><h2>${ok?bc.result.goodTitle:bc.result.badTitle}</h2><p class="muted">${ok?bc.result.goodText:bc.result.badText}</p><div class="signature">TIBY · THE BOSS</div></div></div><div class="actions"><button class="primary" onclick="renderMap();show('map')"><span>SEGUIR</span><span>→</span></button></div>`}
-function bossAnswer(index){tap();const p=MP();p.bossCheck=index;save();renderBossCheckResult(index)}
+function bossAnswer(index,token){const p=MP();if(!acceptsAction(token,'bossCheck')||p.bossCheck!==null||!activeScenario().bossCheck?.options[index])return;tap();p.bossCheck=index;changed(p);save();renderBossCheckResult(index)}
 function scoreSummary(){
   const p=MP(),rs=uniqueResults(p.results),avg=k=>Math.round(rs.reduce((a,r)=>a+r.scores[k],0)/Math.max(1,rs.length));
   let listen=avg('listen'),criterion=avg('criterion'),conversation=avg('conversation'),recommendation=avg('recommendation');
@@ -274,7 +464,7 @@ function scoreSummary(){
   return{listen,criterion,conversation,recommendation,total,rank};
 }
 function final({scroll=true}={}){
-  const p=MP();if(!p.finishedAt)p.finishedAt=Date.now();p.results=uniqueResults(p.results);save();
+  const p=MP();if(!moduleComplete(p)){renderMap();show('map',{scroll});return}
   const s=scoreSummary();
   el('overall').textContent=s.total;el('sListen').textContent=s.listen;el('sCriterion').textContent=s.criterion;el('sConversation').textContent=s.conversation;el('sRecommendation').textContent=s.recommendation;el('rank').textContent=s.rank;
   const w=[['ESCUCHA',s.listen],['CRITERIO',s.criterion],['CONVERSACIÓN',s.conversation],['RECOMENDACIÓN',s.recommendation]].sort((a,b)=>a[1]-b[1])[0][0];
@@ -287,15 +477,32 @@ function pilotDuration(){const p=MP();if(!p.startedAt||!p.finishedAt)return null
 function pilotResultText(){
   const m=activeModule(),s=scoreSummary(),mins=pilotDuration(),alias=(el('pilotAlias')?.value||S.pilotAlias||'Piloto').trim()||'Piloto';
   S.pilotAlias=alias;save();
-  return `PITBULL ACADEMY · PRE-PILOT\n${alias}\n${m.code} · ${m.title}\nGeneral: ${s.total}\nEscucha: ${s.listen}\nCriterio: ${s.criterion}\nConversación: ${s.conversation}\nRecomendación: ${s.recommendation}${mins?`\nDuración: ${mins} min`:''}\nCasos: ${MP().completed.length}/${C().length}\nBuild: CORE V1.1`;
+  return `PITBULL ACADEMY · PRE-PILOT\n${alias}\n${m.code} · ${m.title}\nGeneral: ${s.total}\nEscucha: ${s.listen}\nCriterio: ${s.criterion}\nConversación: ${s.conversation}\nRecomendación: ${s.recommendation}${mins?`\nDuración: ${mins} min`:''}\nCasos: ${MP().completed.length}/${C().length}\nBuild: CORE V1.1 · ${RELEASE}`;
+}
+let sharingResult=false;
+function copyFeedback(message){const status=el('copyStatus');if(status)status.textContent=message}
+async function copyPilotResult(text=pilotResultText()){
+  tap();
+  try{
+    if(!navigator.clipboard?.writeText)throw new Error('Clipboard unavailable');
+    await navigator.clipboard.writeText(text);copyFeedback('Resultado copiado.');
+    el('copyFallback').hidden=true;return true;
+  }catch(e){
+    const box=el('copyFallback'),field=el('resultText');
+    field.value=text;box.hidden=false;field.focus();field.select();
+    copyFeedback('Seleccioná y copiá el texto del resultado.');return false;
+  }
 }
 async function sharePilotResult(){
-  tap();const text=pilotResultText(),btn=el('shareResult');
+  if(sharingResult)return;
+  sharingResult=true;tap();const text=pilotResultText(),btn=el('shareResult');if(btn)btn.disabled=true;
   try{
-    if(navigator.share){await navigator.share({title:'Pitbull Academy · Resultado PRE-PILOT',text})}
-    else if(navigator.clipboard){await navigator.clipboard.writeText(text);if(btn){const old=btn.innerHTML;btn.innerHTML='<span>RESULTADO COPIADO</span><span>✓</span>';setTimeout(()=>btn.innerHTML=old,1600)}}
-    else{window.prompt('Copiá este resultado',text)}
-  }catch(e){}
+    if(navigator.share){
+      try{await navigator.share({title:'Pitbull Academy · Resultado PRE-PILOT',text});return}
+      catch(e){if(e.name==='AbortError'){copyFeedback('Podés usar COPIAR RESULTADO cuando quieras.');return}}
+    }
+    await copyPilotResult(text);
+  }finally{sharingResult=false;if(btn)btn.disabled=false}
 }
 function review({scroll=true}={}){
   const p=MP(),actions=Object.fromEntries((activeModule().decisionActions||[]).map(a=>[a.id,actionLabel(a)]));actions.LOST='Cliente perdido';
@@ -304,4 +511,37 @@ function review({scroll=true}={}){
 }
 
 window.addEventListener('DOMContentLoaded',render);
-if('serviceWorker' in navigator){window.addEventListener('load',()=>navigator.serviceWorker.register('./service-worker.js').catch(()=>{}))}
+window.addEventListener('storage',event=>{if(event.key===KEY||event.key===null){if(event.newValue!==persistence.lastStored){persistence.issue='conflict';persistenceStatus()}}});
+window.addEventListener('beforeunload',event=>{if(persistence.issue){event.preventDefault();event.returnValue=''}});
+
+let updateRegistration=null;
+let applyingUpdate=false;
+function showUpdate(registration){updateRegistration=registration;const box=el('updateStatus');if(box)box.hidden=false}
+function applyUpdate(){
+  if(applyingUpdate||!save())return;
+  applyingUpdate=true;
+  if(updateRegistration?.waiting)updateRegistration.waiting.postMessage({type:'ACTIVATE_UPDATE'});
+  else window.location.reload();
+}
+if('serviceWorker' in navigator){
+  let hadController=!!navigator.serviceWorker.controller;
+  navigator.serviceWorker.addEventListener('controllerchange',()=>{
+    if(applyingUpdate){window.location.reload();return}
+    if(hadController)showUpdate(updateRegistration);
+    hadController=true;
+  });
+  window.addEventListener('load',async()=>{
+    try{
+      const registration=await navigator.serviceWorker.register('./service-worker.js',{updateViaCache:'none'});
+      updateRegistration=registration;
+      if(registration.waiting)showUpdate(registration);
+      registration.addEventListener('updatefound',()=>{
+        const installing=registration.installing;
+        installing?.addEventListener('statechange',()=>{
+          if(installing.state==='installed'&&navigator.serviceWorker.controller)showUpdate(registration);
+        });
+      });
+      await registration.update();
+    }catch(e){/* Existing/offline training remains available. */}
+  });
+}
