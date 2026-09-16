@@ -43,6 +43,8 @@ Pitbull Academy es la plataforma interna de formación comercial de Pitbull Supl
 - `assets/` — producto, Tiby, iconos y sistema visual de clientes.
 - `docs/PHASE-1-STABILIZATION.md` — contrato de comportamiento y persistencia estabilizados.
 - `docs/PHASE-2-SEPARATION.md` — límites de responsabilidad, compatibilidad, pruebas y rollback de la separación.
+- `domain/`, `engine/visit-knowledge.js`, `engine/decision-sufficiency.js` — contratos aditivos de clientes/visitas, validación y consultas puras; todavía no se cargan en el runtime productivo.
+- `docs/PHASE-3-DATA-MODEL.md` — contratos, límites de conocimiento, memoria inactiva, compatibilidad y verificación del modelo.
 - `docs/PRE-PILOT-V1.1.md` — protocolo del piloto con tres vendedores.
 
 ## Biblioteca actual
@@ -61,6 +63,12 @@ Para PRE-PILOT, el contenido se revisó con fuentes técnicas que reportan resul
 
 ## Persistencia
 El progreso se guarda localmente por dispositivo. Core V1.1 protege el avance durante la migración desde versiones anteriores, deduplica resultados y separa el progreso por módulo.
+
+## Verificación del modelo de datos
+
+`npm test` ejecuta todos los contratos de compatibilidad Phase 1/2 y los tests del modelo Phase 3, sin dependencias adicionales. `npm run test:domain` ejecuta sólo los tests nuevos. La suite de navegador sigue separada en `npm run test:browser` y usa una instalación existente de Playwright/Chromium.
+
+El modelo Phase 3 es una biblioteca de autoría CommonJS con fixtures sintéticos: no convierte M01, no cambia la interfaz ni se conecta a localStorage o al service worker. La confianza de memoria es texto o `null`; la confirmación depende únicamente del requisito explícito de cada acción. Ver el reporte Phase 3 antes de cualquier integración productiva.
 
 ## Piloto
 Objetivo inicial: probar M01 con 3 vendedores y observar:
