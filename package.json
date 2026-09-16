@@ -2,7 +2,8 @@
   "name": "pitbull-academy",
   "private": true,
   "scripts": {
-    "test": "node --test tests/stabilization.test.cjs tests/service-worker.test.cjs tests/separation.test.cjs",
+    "test": "node --test tests/stabilization.test.cjs tests/service-worker.test.cjs tests/separation.test.cjs tests/domain-model.test.cjs tests/decision-sufficiency.test.cjs tests/domain-compatibility.test.cjs",
+    "test:domain": "node --test tests/domain-model.test.cjs tests/decision-sufficiency.test.cjs tests/domain-compatibility.test.cjs",
     "test:browser": "node --test tests/browser.test.cjs"
   },
   "engines": { "node": ">=20" }

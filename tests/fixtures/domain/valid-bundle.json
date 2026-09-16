@@ -1,0 +1,622 @@
+{
+  "contract_version": 1,
+  "clients": [
+    {
+      "contract_version": 1,
+      "content_revision": 1,
+      "client_id": "TEST-CLIENT-A",
+      "identification": {
+        "name": "Synthetic test client A",
+        "base_age": null,
+        "occupation": null,
+        "active_status": null,
+        "recurrence": null,
+        "visual_version": null
+      },
+      "human_identity": {
+        "work_type": null,
+        "everyday_environment": null,
+        "responsibilities": null,
+        "time_availability": null,
+        "organization_style": null,
+        "central_human_trait": null
+      },
+      "sports_context": {
+        "primary_discipline": null,
+        "secondary_discipline": null,
+        "experience_level": null,
+        "habitual_frequency": null,
+        "habitual_schedule": null,
+        "habitual_duration": null,
+        "sports_history": null,
+        "relationship_to_training": null,
+        "regularity": null,
+        "planning_level": null
+      },
+      "commercial_profile": {
+        "supplementation_knowledge": null,
+        "knowledge_precision": null,
+        "dominant_vocabulary": null,
+        "information_source": null,
+        "request_style": null,
+        "confidence_level": null,
+        "question_tendency": null,
+        "price_sensitivity": null,
+        "brand_sensitivity": null,
+        "promo_sensitivity": null,
+        "technical_explanation_tolerance": null,
+        "conversational_style": null
+      },
+      "internal_visual_identity": {
+        "approximate_height": null,
+        "weight_range": null,
+        "contexture": null,
+        "visual_muscle": null,
+        "visual_adiposity": null,
+        "body_distribution": null,
+        "posture": null,
+        "face_shape": null,
+        "hair": null,
+        "facial_hair": null,
+        "glasses": null,
+        "distinguishing_traits": null,
+        "usual_style": null,
+        "visual_age": null
+      },
+      "recognition_matrix": {
+        "facial_anchor": null,
+        "distinctive_anchor": null,
+        "body_presence_anchor": null
+      },
+      "relationship_with_store": {
+        "initial_relationship_level": "N3",
+        "visit_frequency": null,
+        "recurrence_probability": null,
+        "expected_familiarity": null,
+        "loyalty_type": null,
+        "buys_for_self": true,
+        "buys_for_third_parties": true,
+        "third_party_types": []
+      },
+      "purchase_recipient_capability": {
+        "possible_recipients": [
+          "SELF",
+          "THIRD_PARTY",
+          "UNKNOWN",
+          "MIXED"
+        ]
+      },
+      "visual_representations": {
+        "face_id": null,
+        "body_id": null,
+        "academy_canon": null,
+        "visit_visuals": []
+      }
+    }
+  ],
+  "visits": [
+    {
+      "contract_version": 1,
+      "content_revision": 1,
+      "visit_id": "TEST-VISIT-A",
+      "client_id": "TEST-CLIENT-A",
+      "module_id": "TEST-MODULE",
+      "visit_number": 1,
+      "difficulty": null,
+      "mode": null,
+      "relationship_level": "N3",
+      "chronology_index": 0,
+      "entry": {
+        "opening_line": "Synthetic opening; not approved curriculum.",
+        "visible_context": null,
+        "initial_mood": null,
+        "stated_request": "Synthetic stated request",
+        "requested_term": null,
+        "initial_confidence": null,
+        "initial_information_level": null
+      },
+      "participants": [
+        {
+          "id": "TEST-PERSON-A",
+          "label": "Synthetic third party"
+        }
+      ],
+      "purchase_context": {
+        "buyer_ref": {
+          "kind": "CLIENT",
+          "id": "TEST-CLIENT-A"
+        },
+        "end_user_refs": [
+          {
+            "kind": "PARTICIPANT",
+            "id": "TEST-PERSON-A"
+          }
+        ],
+        "recipient": "THIRD_PARTY"
+      },
+      "facts": [
+        {
+          "id": "recipient",
+          "type": "CRITICAL",
+          "subject_ref": {
+            "kind": "CLIENT",
+            "id": "TEST-CLIENT-A"
+          },
+          "value_type": "PURCHASE_CONTEXT",
+          "value": null,
+          "enum_values": null,
+          "value_ref": "PURCHASE_CONTEXT",
+          "importance": null,
+          "known_at_start": false,
+          "discoverable_by": [
+            "ask-recipient",
+            "ask-recipient-alternative"
+          ],
+          "required_for_decision": [
+            {
+              "action_id": "RECOMMEND_CATEGORY",
+              "evidence": "DISCOVERED"
+            },
+            {
+              "action_id": "RECOMMEND_PRODUCT",
+              "evidence": "CONFIRMED"
+            }
+          ],
+          "memory_after_visit": null
+        },
+        {
+          "id": "goal",
+          "type": "TEMPORARY",
+          "subject_ref": {
+            "kind": "PARTICIPANT",
+            "id": "TEST-PERSON-A"
+          },
+          "value_type": "TEXT",
+          "value": "Synthetic purpose",
+          "enum_values": null,
+          "value_ref": null,
+          "importance": null,
+          "known_at_start": false,
+          "discoverable_by": [
+            "ask-goal"
+          ],
+          "required_for_decision": [
+            {
+              "action_id": "RECOMMEND_PRODUCT",
+              "evidence": "DISCOVERED"
+            }
+          ],
+          "memory_after_visit": {
+            "memory_type": "historical",
+            "status": "TO_CONFIRM",
+            "confidence": null
+          }
+        },
+        {
+          "id": "stated-request",
+          "type": "CONTEXTUAL",
+          "subject_ref": {
+            "kind": "CLIENT",
+            "id": "TEST-CLIENT-A"
+          },
+          "value_type": "TEXT",
+          "value": "Synthetic stated request",
+          "enum_values": null,
+          "value_ref": null,
+          "importance": null,
+          "known_at_start": true,
+          "discoverable_by": [],
+          "required_for_decision": [],
+          "memory_after_visit": null
+        },
+        {
+          "id": "optional-context",
+          "type": "STABLE",
+          "subject_ref": {
+            "kind": "PARTICIPANT",
+            "id": "TEST-PERSON-A"
+          },
+          "value_type": "NUMBER",
+          "value": null,
+          "enum_values": null,
+          "value_ref": null,
+          "importance": null,
+          "known_at_start": false,
+          "discoverable_by": [],
+          "required_for_decision": [],
+          "memory_after_visit": null
+        }
+      ],
+      "topics": [
+        {
+          "id": "recipient",
+          "label": "Recipient"
+        },
+        {
+          "id": "goal",
+          "label": "Purpose"
+        }
+      ],
+      "interventions": [
+        {
+          "id": "ask-recipient",
+          "text": "¿Para quién lo estás buscando?",
+          "topics": [
+            "recipient"
+          ],
+          "relevance": null,
+          "timing_rules": [],
+          "discovery_value": null,
+          "relationship_effect": null,
+          "assumption_risk": null,
+          "reveals": [
+            "recipient"
+          ],
+          "opens_topics": [
+            "recipient"
+          ],
+          "closes_topics": [],
+          "client_response": "Synthetic response for validation only."
+        },
+        {
+          "id": "ask-recipient-alternative",
+          "text": "¿Lo vas a usar vos?",
+          "topics": [
+            "recipient"
+          ],
+          "relevance": null,
+          "timing_rules": [],
+          "discovery_value": null,
+          "relationship_effect": null,
+          "assumption_risk": null,
+          "reveals": [
+            "recipient"
+          ],
+          "opens_topics": [
+            "recipient"
+          ],
+          "closes_topics": [],
+          "client_response": "Synthetic response for validation only."
+        },
+        {
+          "id": "ask-goal",
+          "text": "¿Qué busca mejorar?",
+          "topics": [
+            "goal"
+          ],
+          "relevance": null,
+          "timing_rules": [],
+          "discovery_value": null,
+          "relationship_effect": null,
+          "assumption_risk": null,
+          "reveals": [
+            "goal"
+          ],
+          "opens_topics": [
+            "goal"
+          ],
+          "closes_topics": [],
+          "client_response": "Synthetic response for validation only."
+        }
+      ],
+      "actions": [
+        {
+          "id": "ASK_MORE",
+          "sufficiency_policy": "UNSPECIFIED",
+          "target_ref": null
+        },
+        {
+          "id": "CLARIFY_REQUEST",
+          "sufficiency_policy": "UNSPECIFIED",
+          "target_ref": null
+        },
+        {
+          "id": "RECOMMEND_CATEGORY",
+          "sufficiency_policy": "FACT_REQUIREMENTS",
+          "target_ref": {
+            "kind": "CATEGORY",
+            "id": "TEST-CATEGORY"
+          }
+        },
+        {
+          "id": "RECOMMEND_PRODUCT",
+          "sufficiency_policy": "FACT_REQUIREMENTS",
+          "target_ref": {
+            "kind": "PRODUCT",
+            "id": "TEST-PRODUCT"
+          }
+        },
+        {
+          "id": "DEFER_SUPPLEMENT",
+          "sufficiency_policy": "NO_FACT_REQUIREMENTS",
+          "target_ref": null
+        },
+        {
+          "id": "REFER_PROFESSIONAL",
+          "sufficiency_policy": "UNSPECIFIED",
+          "target_ref": null
+        }
+      ],
+      "consequence_notes": null,
+      "memory_notes": null
+    },
+    {
+      "contract_version": 1,
+      "content_revision": 1,
+      "visit_id": "TEST-VISIT-B",
+      "client_id": "TEST-CLIENT-A",
+      "module_id": "TEST-MODULE",
+      "visit_number": 2,
+      "difficulty": null,
+      "mode": null,
+      "relationship_level": "N0",
+      "chronology_index": 1,
+      "entry": {
+        "opening_line": "Synthetic opening; not approved curriculum.",
+        "visible_context": null,
+        "initial_mood": null,
+        "stated_request": "Synthetic stated request",
+        "requested_term": null,
+        "initial_confidence": null,
+        "initial_information_level": null
+      },
+      "participants": [],
+      "purchase_context": {
+        "buyer_ref": {
+          "kind": "CLIENT",
+          "id": "TEST-CLIENT-A"
+        },
+        "end_user_refs": [
+          {
+            "kind": "CLIENT",
+            "id": "TEST-CLIENT-A"
+          }
+        ],
+        "recipient": "SELF"
+      },
+      "facts": [
+        {
+          "id": "recipient",
+          "type": "CRITICAL",
+          "subject_ref": {
+            "kind": "CLIENT",
+            "id": "TEST-CLIENT-A"
+          },
+          "value_type": "PURCHASE_CONTEXT",
+          "value": null,
+          "enum_values": null,
+          "value_ref": "PURCHASE_CONTEXT",
+          "importance": null,
+          "known_at_start": false,
+          "discoverable_by": [
+            "ask-recipient",
+            "ask-recipient-alternative"
+          ],
+          "required_for_decision": [
+            {
+              "action_id": "RECOMMEND_CATEGORY",
+              "evidence": "DISCOVERED"
+            },
+            {
+              "action_id": "RECOMMEND_PRODUCT",
+              "evidence": "CONFIRMED"
+            }
+          ],
+          "memory_after_visit": null
+        },
+        {
+          "id": "goal",
+          "type": "TEMPORARY",
+          "subject_ref": {
+            "kind": "CLIENT",
+            "id": "TEST-CLIENT-A"
+          },
+          "value_type": "TEXT",
+          "value": "Different temporary purpose",
+          "enum_values": null,
+          "value_ref": null,
+          "importance": null,
+          "known_at_start": false,
+          "discoverable_by": [
+            "ask-goal"
+          ],
+          "required_for_decision": [
+            {
+              "action_id": "RECOMMEND_PRODUCT",
+              "evidence": "DISCOVERED"
+            }
+          ],
+          "memory_after_visit": {
+            "memory_type": "historical",
+            "status": "TO_CONFIRM",
+            "confidence": null
+          }
+        },
+        {
+          "id": "stated-request",
+          "type": "CONTEXTUAL",
+          "subject_ref": {
+            "kind": "CLIENT",
+            "id": "TEST-CLIENT-A"
+          },
+          "value_type": "TEXT",
+          "value": "Synthetic stated request",
+          "enum_values": null,
+          "value_ref": null,
+          "importance": null,
+          "known_at_start": true,
+          "discoverable_by": [],
+          "required_for_decision": [],
+          "memory_after_visit": null
+        },
+        {
+          "id": "optional-context",
+          "type": "STABLE",
+          "subject_ref": {
+            "kind": "CLIENT",
+            "id": "TEST-CLIENT-A"
+          },
+          "value_type": "NUMBER",
+          "value": null,
+          "enum_values": null,
+          "value_ref": null,
+          "importance": null,
+          "known_at_start": false,
+          "discoverable_by": [],
+          "required_for_decision": [],
+          "memory_after_visit": null
+        }
+      ],
+      "topics": [
+        {
+          "id": "recipient",
+          "label": "Recipient"
+        },
+        {
+          "id": "goal",
+          "label": "Purpose"
+        }
+      ],
+      "interventions": [
+        {
+          "id": "ask-recipient",
+          "text": "¿Para quién lo estás buscando?",
+          "topics": [
+            "recipient"
+          ],
+          "relevance": null,
+          "timing_rules": [],
+          "discovery_value": null,
+          "relationship_effect": null,
+          "assumption_risk": null,
+          "reveals": [
+            "recipient"
+          ],
+          "opens_topics": [
+            "recipient"
+          ],
+          "closes_topics": [],
+          "client_response": "Synthetic response for validation only."
+        },
+        {
+          "id": "ask-recipient-alternative",
+          "text": "¿Lo vas a usar vos?",
+          "topics": [
+            "recipient"
+          ],
+          "relevance": null,
+          "timing_rules": [],
+          "discovery_value": null,
+          "relationship_effect": null,
+          "assumption_risk": null,
+          "reveals": [
+            "recipient"
+          ],
+          "opens_topics": [
+            "recipient"
+          ],
+          "closes_topics": [],
+          "client_response": "Synthetic response for validation only."
+        },
+        {
+          "id": "ask-goal",
+          "text": "¿Qué busca mejorar?",
+          "topics": [
+            "goal"
+          ],
+          "relevance": null,
+          "timing_rules": [],
+          "discovery_value": null,
+          "relationship_effect": null,
+          "assumption_risk": null,
+          "reveals": [
+            "goal"
+          ],
+          "opens_topics": [
+            "goal"
+          ],
+          "closes_topics": [],
+          "client_response": "Synthetic response for validation only."
+        }
+      ],
+      "actions": [
+        {
+          "id": "ASK_MORE",
+          "sufficiency_policy": "UNSPECIFIED",
+          "target_ref": null
+        },
+        {
+          "id": "CLARIFY_REQUEST",
+          "sufficiency_policy": "UNSPECIFIED",
+          "target_ref": null
+        },
+        {
+          "id": "RECOMMEND_CATEGORY",
+          "sufficiency_policy": "FACT_REQUIREMENTS",
+          "target_ref": {
+            "kind": "CATEGORY",
+            "id": "TEST-CATEGORY"
+          }
+        },
+        {
+          "id": "RECOMMEND_PRODUCT",
+          "sufficiency_policy": "FACT_REQUIREMENTS",
+          "target_ref": {
+            "kind": "PRODUCT",
+            "id": "TEST-PRODUCT"
+          }
+        },
+        {
+          "id": "DEFER_SUPPLEMENT",
+          "sufficiency_policy": "NO_FACT_REQUIREMENTS",
+          "target_ref": null
+        },
+        {
+          "id": "REFER_PROFESSIONAL",
+          "sufficiency_policy": "UNSPECIFIED",
+          "target_ref": null
+        }
+      ],
+      "consequence_notes": null,
+      "memory_notes": null
+    }
+  ],
+  "memory_records": [
+    {
+      "contract_version": 1,
+      "content_revision": 1,
+      "record_id": "TEST-MEMORY-A",
+      "client_id": "TEST-CLIENT-A",
+      "subject_ref": {
+        "kind": "PARTICIPANT",
+        "id": "TEST-PERSON-A"
+      },
+      "memory_type": "historical",
+      "memory_value": {
+        "value_type": "TEXT",
+        "value": "Synthetic purpose",
+        "enum_values": null
+      },
+      "confidence": "Reported during a synthetic fixture conversation",
+      "status": "TO_CONFIRM",
+      "source": {
+        "visit_id": "TEST-VISIT-A",
+        "fact_id": "goal",
+        "intervention_id": "ask-goal",
+        "content_revision": 1,
+        "recorded_at": null
+      }
+    }
+  ],
+  "references": {
+    "module_ids": [
+      "TEST-MODULE"
+    ],
+    "category_ids": [
+      "TEST-CATEGORY"
+    ],
+    "product_ids": [
+      "TEST-PRODUCT"
+    ]
+  }
+}
