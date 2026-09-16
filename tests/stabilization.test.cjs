@@ -314,7 +314,7 @@ test('native sharing failure falls back to clipboard; denied clipboard exposes s
   r.context.navigator.clipboard={writeText:async text=>{copied=text}};
   await r.run('sharePilotResult()');
   assert.match(copied,/PITBULL ACADEMY/);
-  assert.match(copied,/phase1-2026-09-15-1/);
+  assert.match(copied,/phase2-2026-09-15-4/);
   r.context.navigator.clipboard.writeText=async()=>{throw new Error('denied')};
   await r.run('copyPilotResult()');
   assert.equal(r.nodes.get('copyFallback').hidden,false);

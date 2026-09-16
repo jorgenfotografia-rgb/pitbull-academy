@@ -17,7 +17,7 @@ Pitbull Academy es la plataforma interna de formación comercial de Pitbull Supl
 - Home generalizada y continuidad real del entrenamiento: si un módulo ya comenzó, **Continuar entrenamiento** retoma el punto útil y no vuelve innecesariamente a la introducción.
 - Protección de casos completados: ya no reinician el caso ni duplican resultados; pasan a una vista de **revisión de caso**.
 - Resultados deduplicados por caso para proteger el scoring.
-- Migración reforzada: durante la transición conserva el progreso válido más avanzado entre el estado legacy y `moduleProgress`, y después elimina la duplicación legacy.
+- Migración explícita: conserva un respaldo exacto del guardado anterior y prioriza el progreso activo de `moduleProgress` sobre un estado legacy divergente, sin inferir actualidad por longitud de conversación.
 - M01 reformulado con lenguaje prudente: **evaluar glutamina** como posible complemento no equivale a recomendarla automáticamente ni a prometer un resultado.
 - Registro de fuentes técnicas para M01, separado de la fuente de catálogo.
 - Pantalla final preparada para piloto con nombre/alias, duración y **Compartir resultado**.
@@ -27,7 +27,12 @@ Pitbull Academy es la plataforma interna de formación comercial de Pitbull Supl
 - `index.html` — shell de Academy y pantallas.
 - `styles.css` — sistema visual base.
 - `core-v1.css` — capa de interfaz general / multimarca / PRE-PILOT.
-- `app.js` — navegación, persistencia, motor de módulos, scoring, biblioteca y salida de piloto.
+- `app.js` — composición de dependencias, identidad de release e inicio.
+- `engine/` — estado y persistencia schema 1, comandos de sesión, conversación y scoring legacy; ejecutable sin APIs de presentación del navegador.
+- `content/` — interfaces de lectura separadas para clientes, casos/visitas legacy, módulos y catálogo.
+- `visuals/` — selección de imágenes, sin acceso mutable al progreso.
+- `ui/` — renderizado de snapshots de sólo lectura, eventos y efectos de presentación.
+- `platform/` — compartir/copiar resultados y coordinación de actualizaciones PWA.
 - `data/brands.js` — registro de marcas.
 - `data/products.js` — catálogo de productos sin lógica pedagógica.
 - `data/modules.js` — competencias, acciones y relaciones módulo-producto.
@@ -36,6 +41,8 @@ Pitbull Academy es la plataforma interna de formación comercial de Pitbull Supl
 - `data/clients.js` — dataset conversacional heredado de M01; se mantiene como capa compatible durante la migración.
 - `manifest.webmanifest` + `service-worker.js` — instalación PWA y caché offline.
 - `assets/` — producto, Tiby, iconos y sistema visual de clientes.
+- `docs/PHASE-1-STABILIZATION.md` — contrato de comportamiento y persistencia estabilizados.
+- `docs/PHASE-2-SEPARATION.md` — límites de responsabilidad, compatibilidad, pruebas y rollback de la separación.
 - `docs/PRE-PILOT-V1.1.md` — protocolo del piloto con tres vendedores.
 
 ## Biblioteca actual
