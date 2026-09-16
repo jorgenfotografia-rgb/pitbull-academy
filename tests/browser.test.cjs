@@ -13,7 +13,7 @@ try{playwright=require(process.env.ACADEMY_PLAYWRIGHT_PATH||'playwright')}catch{
 const executable=process.env.ACADEMY_BROWSER_EXECUTABLE;
 const skip=!playwright?'An existing Playwright runtime is required (ACADEMY_PLAYWRIGHT_PATH).':false;
 const BASE='0835cb475ea09958137a3b490749a4daf0a3e3b5';
-const release='phase2-2026-09-15-1';
+const release='phase2-2026-09-15-2';
 
 async function setup(t,{legacy=false,viewport={width:390,height:844}}={}){
   let mode=legacy?'legacy':'current';
