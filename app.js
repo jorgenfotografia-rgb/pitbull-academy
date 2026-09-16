@@ -1,5 +1,5 @@
 window.ACADEMY_PHASE1=true;
-const RELEASE='phase1-2026-09-15-1';
+const RELEASE='phase2-2026-09-15-1';
 const BRANDS=window.BRANDS||[];
 const PRODUCTS=window.PRODUCTS||[];
 const MODULES=window.MODULES||[];
@@ -395,7 +395,8 @@ function renderDecision(){
   el('decisionList').innerHTML=(m.decisionActions||[]).map(a=>`<button type="button" class="decision" onclick="decide('${a.id}','${actionToken('decision')}')"><b>${actionLabel(a)}</b><span>${a.hint}</span></button>`).join('');
 }
 function openDecision(){if(S.view!=='chat'||MP().pending||MP().lostPending||MP().completed.includes(MP().current))return;tap();renderDecision();show('decision')}
-function calc(action){const p=MP(),c=current(),d=discoveredSet(),listen=Math.min(100,Math.round([...d].filter(x=>c.facts.includes(x)).length/Math.max(1,c.facts.length)*100));return{listen,criterion:action===c.answer?100:(action==='ASK_MORE'&&listen<67?78:35),conversation:p.rapport,recommendation:action===c.answer?100:(action==='ASK_MORE'&&listen<67?75:30)}}
+const legacyScoring=Academy.legacyScoring();
+function calc(action){return legacyScoring.calc(action,MP(),current())}
 function decide(action,token){
   if(!acceptsAction(token,'decision'))return;
   const p=MP(),c=current();if(!c||p.pending||p.lostPending||p.completed.includes(p.current))return;
@@ -455,14 +456,7 @@ function renderBossCheck({scroll=true}={}){
 }
 function renderBossCheckResult(index){const bc=activeScenario().bossCheck,ok=bc.options[index]?.correct;el('bossCheckBody').innerHTML=`<div class="boss-hero"><img src="${A(bc.image)}" alt="Tiby The Boss"><div class="boss-copy"><p class="eyebrow">THE BOSS CHECK</p><h2>${ok?bc.result.goodTitle:bc.result.badTitle}</h2><p class="muted">${ok?bc.result.goodText:bc.result.badText}</p><div class="signature">TIBY · THE BOSS</div></div></div><div class="actions"><button class="primary" onclick="renderMap();show('map')"><span>SEGUIR</span><span>→</span></button></div>`}
 function bossAnswer(index,token){const p=MP();if(!acceptsAction(token,'bossCheck')||p.bossCheck!==null||!activeScenario().bossCheck?.options[index])return;tap();p.bossCheck=index;changed(p);save();renderBossCheckResult(index)}
-function scoreSummary(){
-  const p=MP(),rs=uniqueResults(p.results),avg=k=>Math.round(rs.reduce((a,r)=>a+r.scores[k],0)/Math.max(1,rs.length));
-  let listen=avg('listen'),criterion=avg('criterion'),conversation=avg('conversation'),recommendation=avg('recommendation');
-  const bc=activeScenario()?.bossCheck;if(bc&&p.bossCheck!==null&&bc.options[p.bossCheck]?.correct)criterion=Math.min(100,criterion+5);
-  const total=Math.round(listen*.27+criterion*.28+conversation*.20+recommendation*.25);
-  const rank=total>=90?'ASESOR':total>=80?'DETECTOR':total>=68?'OBSERVADOR':'NOVATO';
-  return{listen,criterion,conversation,recommendation,total,rank};
-}
+function scoreSummary(){return legacyScoring.scoreSummary(MP(),activeScenario())}
 function final({scroll=true}={}){
   const p=MP();if(!moduleComplete(p)){renderMap();show('map',{scroll});return}
   const s=scoreSummary();
