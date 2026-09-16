@@ -30,7 +30,7 @@ function worker({failure,wrongRelease=false}={}){
       if(file===failure)return new Response('missing',{status:404});
       if(!fs.existsSync(path.join(ROOT,file)))throw new Error('Offline');
       let body=fs.readFileSync(path.join(ROOT,file));
-      if(wrongRelease&&file==='index.html')body=Buffer.from(body.toString().replace('phase2-2026-09-15-2','wrong-release'));
+      if(wrongRelease&&file==='index.html')body=Buffer.from(body.toString().replace('phase2-2026-09-15-3','wrong-release'));
       return new Response(body,{status:200});
     }
   };

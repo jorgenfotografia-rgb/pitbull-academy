@@ -49,7 +49,31 @@ function runtime({ seed = {}, sources = {}, boot = true, storageFailure = false 
   context.window = context;
   vm.createContext(context);
   const files = [...html.matchAll(/<script src="([^"?]+)(?:\?[^" ]*)?"><\/script>/g)].map(m => m[1]);
-  for (const file of files) vm.runInContext(sources[file] ?? fs.readFileSync(path.join(ROOT, file), 'utf8'), context, { filename: file });
+  for (const file of files) {
+    let code=sources[file] ?? fs.readFileSync(path.join(ROOT, file), 'utf8');
+    // Test-only instrumentation preserves Phase 1's fixture expressions/assertions.
+    // None of these writable references or compatibility globals ship to browsers.
+    if(file==='engine/session.js')code=code.replace('return Object.freeze({command,snapshot,',
+      'globalThis.__fixture={get S(){return S},MP,C,current,persistence,actionToken,scoreSummary,actions};\nreturn Object.freeze({command,snapshot,');
+    if(file==='ui/render.js')code=code.replace('return Object.freeze({render,status:persistenceStatus});',
+      'globalThis.__renderFixture={render,renderHome,renderMap,renderChat,renderDecision,setPhoto};\nreturn Object.freeze({render,status:persistenceStatus});');
+    if(file==='platform/updates.js')code=code.replace('return {applyUpdate};',
+      'globalThis.__updateFixture={get registration(){return updateRegistration},set registration(value){updateRegistration=value},get applying(){return applyingUpdate}};\nreturn {applyUpdate};');
+    if(file==='app.js')code=code.replace('return Object.freeze({snapshot:',
+      'globalThis.__controllerFixture=controller;\nreturn Object.freeze({snapshot:');
+    vm.runInContext(code,context,{filename:file});
+  }
+  if(context.__fixture){
+    const fixture=context.__fixture;
+    Object.defineProperty(context,'S',{get:()=>fixture.S});
+    for(const name of ['MP','C','current','actionToken','scoreSummary'])context[name]=fixture[name];
+    context.persistence=fixture.persistence;
+    for(const name of Object.keys(fixture.actions))context[name]=(...args)=>context.__controllerFixture.run(name,...args);
+    for(const [name,fn] of Object.entries(context.__renderFixture))context[name]=fn;
+    for(const name of ['copyPilotResult','sharePilotResult','applyUpdate'])context[name]=(...args)=>context.__controllerFixture.run(name,...args);
+    Object.defineProperty(context,'updateRegistration',{get:()=>context.__updateFixture.registration,set:value=>{context.__updateFixture.registration=value}});
+    Object.defineProperty(context,'applyingUpdate',{get:()=>context.__updateFixture.applying});
+  }
   if (boot) for (const f of events.DOMContentLoaded || []) f();
   return {
     context, nodes, storage, events,

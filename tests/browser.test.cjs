@@ -13,7 +13,7 @@ try{playwright=require(process.env.ACADEMY_PLAYWRIGHT_PATH||'playwright')}catch{
 const executable=process.env.ACADEMY_BROWSER_EXECUTABLE;
 const skip=!playwright?'An existing Playwright runtime is required (ACADEMY_PLAYWRIGHT_PATH).':false;
 const BASE='0835cb475ea09958137a3b490749a4daf0a3e3b5';
-const release='phase2-2026-09-15-2';
+const release='phase2-2026-09-15-3';
 
 async function setup(t,{legacy=false,viewport={width:390,height:844}}={}){
   let mode=legacy?'legacy':'current';
@@ -85,11 +85,11 @@ test('mobile: first question, rapid input, reload, and selectable copy fallback'
   assert.equal(await page.locator('#thread .bubble.client').count(),2);
   await page.reload();await enter(page);
   assert.equal(await page.locator('#thread .bubble.you').count(),1);
-  assert.equal(await page.evaluate(()=>MP().node),'deep');
+  assert.equal(await page.evaluate(()=>AcademyApp.snapshot().moduleProgress.m01.node),'deep');
   assert.equal(await page.locator('#storageStatus').isVisible(),false);
   assert.equal(await page.locator('meta[name="viewport"]').getAttribute('content'),'width=device-width,initial-scale=1');
   await screenshot(page,t,'mobile-conversation');
-  await page.evaluate(()=>sharePilotResult());
+  await page.evaluate(()=>document.getElementById('shareResult').click());
   assert.equal(await page.locator('#copyFallback').getAttribute('hidden'),null);
   assert.match(await page.locator('#resultText').inputValue(),/PITBULL ACADEMY/);
   assert.deepEqual(errors,[]);
@@ -104,25 +104,25 @@ for(const [label,viewport] of [['desktop',{width:1280,height:900}],['mobile',{wi
       if(c){await page.locator('#clientList button').nth(c).click();await page.locator('#case .primary').click()}
       for(let n=0;n<3;n++)await choice(page);
       await page.locator('#resolve').click();
-      await page.locator(`#decisionList button[onclick*="${actions[c]}"]`).click();
+      await page.locator(`#decisionList button[data-args*="${actions[c]}"]`).click();
       assert.equal(await page.locator('#reaction').isVisible(),true);
       await page.locator('#reactionNext').click();
-      assert.equal(await page.evaluate(()=>MP().results.length),c+1);
+      assert.equal(await page.evaluate(()=>AcademyApp.snapshot().moduleProgress.m01.results.length),c+1);
       if(c===2){await page.locator('#bossCheck .choice').first().click();await page.locator('#bossCheck .primary').click()}
     }
     assert.equal(await page.locator('#final').isVisible(),true);
-    assert.equal(await page.evaluate(()=>MP().completed.length),6);
-    const summary=await page.evaluate(()=>scoreSummary());
+    assert.equal(await page.evaluate(()=>AcademyApp.snapshot().moduleProgress.m01.completed.length),6);
+    const summary=await page.evaluate(()=>AcademyApp.summary());
     assert.deepEqual(summary,{listen:81,criterion:100,conversation:89,recommendation:100,total:93,rank:'ASESOR'});
     assert.equal(await page.locator('#overall').textContent(),String(summary.total));
     await screenshot(page,t,label+'-result');
     await page.reload();await enter(page);
-    assert.deepEqual(await page.evaluate(()=>scoreSummary()),summary);
+    assert.deepEqual(await page.evaluate(()=>AcademyApp.summary()),summary);
     await page.locator('#final .actions .secondary').click();
     assert.equal(await page.locator('#reviewList .review-item').count(),6);
     await page.locator('#review .secondary').click();await page.locator('#final .actions .tertiary').click();
     assert.equal(await page.locator('#home').isVisible(),true);
-    assert.equal(await page.evaluate(()=>MP().results.length),0);
+    assert.equal(await page.evaluate(()=>AcademyApp.snapshot().moduleProgress.m01.results.length),0);
     assert.deepEqual(errors,[]);
   });
 }
@@ -150,7 +150,7 @@ test('release upgrade from audited worker preserves progress and unrelated cache
     await Promise.all([page.waitForEvent('load'),page.locator('#applyUpdate').click()]);await enter(page);
   }
   await page.waitForFunction(()=>!!navigator.serviceWorker.controller);
-  assert.deepEqual(await page.evaluate(()=>({chat:MP().chat,node:MP().node,discovered:MP().discovered,rapport:MP().rapport})),before);
+  assert.deepEqual(await page.evaluate(()=>{const p=AcademyApp.snapshot().moduleProgress.m01;return {chat:p.chat,node:p.node,discovered:p.discovered,rapport:p.rapport}}),before);
   assert.equal(await page.evaluate(key=>localStorage.getItem(key+'-before-phase1'),KEY),original);
   assert.ok((await page.evaluate(()=>caches.keys())).includes('unrelated-app-cache'));
   await context.setOffline(true);await page.reload();await enter(page);

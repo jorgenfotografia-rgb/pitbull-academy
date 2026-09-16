@@ -4,7 +4,7 @@
   <meta charset="utf-8">
     <meta name="viewport" content="width=device-width,initial-scale=1">
   <meta name="theme-color" content="#0b0c0d">
-  <meta name="academy-release" content="phase2-2026-09-15-2">
+  <meta name="academy-release" content="phase2-2026-09-15-3">
   <title>Pitbull Academy · Core V1.1 PRE-PILOT</title>
   <link rel="manifest" href="manifest.webmanifest">
   <link rel="icon" href="assets/icon-192.png">
@@ -17,20 +17,20 @@
   <div class="splash-orbit" aria-hidden="true"></div>
   <div class="splash-center">
     <div class="splash-wordmark"><strong>PITBULL</strong><span>ACADEMY</span></div>
-    <button class="splash-enter" onclick="enterAcademy()" aria-label="Entrar a Pitbull Academy"><span>ENTRAR</span><span aria-hidden="true">→</span></button>
+    <button class="splash-enter" data-action="enterAcademy" data-args='[]' aria-label="Entrar a Pitbull Academy"><span>ENTRAR</span><span aria-hidden="true">→</span></button>
   </div>
 </section>
 
 <main class="app">
   <aside id="updateStatus" class="runtime-status" role="status" hidden>
     <p>Hay una actualización disponible. Tu progreso se guardará antes de abrirla.</p>
-    <button id="applyUpdate" class="tertiary" onclick="applyUpdate()">ACTUALIZAR</button>
+    <button id="applyUpdate" class="tertiary" data-action="applyUpdate" data-args='[]'>ACTUALIZAR</button>
   </aside>
   <aside id="storageStatus" class="runtime-status" role="status" hidden>
     <p id="storageMessage"></p>
-    <button id="retryStorage" class="tertiary" onclick="retryPersistence()" hidden>REINTENTAR GUARDADO</button>
-    <button id="reloadStorage" class="tertiary" onclick="reloadSavedProgress()" hidden>CARGAR PROGRESO GUARDADO</button>
-    <button id="recoverStorage" class="tertiary" onclick="recoverStorage()" hidden>CREAR PROGRESO NUEVO</button>
+    <button id="retryStorage" class="tertiary" data-action="retryPersistence" data-args='[]' hidden>REINTENTAR GUARDADO</button>
+    <button id="reloadStorage" class="tertiary" data-action="reloadSavedProgress" data-args='[]' hidden>CARGAR PROGRESO GUARDADO</button>
+    <button id="recoverStorage" class="tertiary" data-action="recoverStorage" data-args='[]' hidden>CREAR PROGRESO NUEVO</button>
   </aside>
   <div class="topline">
     <div id="appcode" class="appcode">PITBULL ACADEMY</div>
@@ -49,9 +49,9 @@
       <div id="moduleScope" class="brand"></div>
       <div class="progress"><i id="moduleProgress"></i></div>
       <div id="resumeText" class="resume"></div>
-      <div class="actions"><button class="primary" onclick="resumeModuleFromHome()"><span id="moduleCta">ENTRAR AL MÓDULO</span><span>→</span></button></div>
+      <div class="actions"><button class="primary" data-action="resumeModuleFromHome" data-args='[]'><span id="moduleCta">ENTRAR AL MÓDULO</span><span>→</span></button></div>
     </div>
-    <button class="catalog-entry" onclick="openCatalog()">
+    <button class="catalog-entry" data-action="openCatalog" data-args='[]'>
       <span><small>BIBLIOTECA</small><strong><span id="productCount">0</span> productos · <span id="brandCount">0</span> marcas</strong><em>Explorá productos, categorías y módulos asociados.</em></span>
       <span class="catalog-arrow">→</span>
     </button>
@@ -64,7 +64,7 @@
     <p id="catalogSummary" class="library-summary"></p>
     <div id="catalogFilters" class="filter-row" aria-label="Filtrar por marca"></div>
     <div id="productList" class="product-list"></div>
-    <div class="actions"><button class="tertiary" onclick="show('home')"><span>VOLVER</span><span>←</span></button></div>
+    <div class="actions"><button class="tertiary" data-action="show" data-args='["home"]'><span>VOLVER</span><span>←</span></button></div>
   </section>
 
   <section id="product" class="screen" hidden>
@@ -86,8 +86,8 @@
     </div>
     <p class="provisional">La presencia de un producto en la biblioteca no implica que su contenido técnico esté aprobado para entrenamiento.</p>
     <div class="actions">
-      <button id="productModuleButton" class="secondary" onclick="openProductModule()"><span>SIN MÓDULO ACTIVO</span><span>·</span></button>
-      <button class="tertiary" onclick="openCatalog()"><span>VOLVER A PRODUCTOS</span><span>←</span></button>
+      <button id="productModuleButton" class="secondary" data-action="openProductModule" data-args='[]'><span>SIN MÓDULO ACTIVO</span><span>·</span></button>
+      <button class="tertiary" data-action="openCatalog" data-args='[]'><span>VOLVER A PRODUCTOS</span><span>←</span></button>
     </div>
   </section>
 
@@ -102,8 +102,8 @@
     <p class="module-instruction">Atendé cada caso como si el cliente estuviera frente a vos. Preguntá, decidí y observá qué ocurre.</p>
     <p id="moduleStatusNote" class="provisional"></p>
     <div class="actions">
-      <button class="primary" onclick="startModule()"><span>EMPEZAR SIMULADOR</span><span>→</span></button>
-      <button class="tertiary" onclick="show('home')"><span>VOLVER</span><span>←</span></button>
+      <button class="primary" data-action="startModule" data-args='[]'><span>EMPEZAR SIMULADOR</span><span>→</span></button>
+      <button class="tertiary" data-action="show" data-args='["home"]'><span>VOLVER</span><span>←</span></button>
     </div>
   </section>
 
@@ -113,14 +113,14 @@
     <p class="muted">Los casos se desbloquean en orden. Los completados quedan disponibles para revisión.</p>
     <div id="visualPilotNote" class="visual-pilot-note"><strong>VISUAL PILOT</strong><span>La misma referencia de Camila se usa temporalmente en todos los clientes para validar la experiencia visual.</span></div>
     <div id="clientList" class="cast"></div>
-    <div class="actions"><button class="tertiary" onclick="show('home')"><span>SALIR DEL MÓDULO</span><span>←</span></button></div>
+    <div class="actions"><button class="tertiary" data-action="show" data-args='["home"]'><span>SALIR DEL MÓDULO</span><span>←</span></button></div>
   </section>
 
   <section id="case" class="screen" hidden>
     <p id="caseNum" class="eyebrow"></p>
     <div class="case-person"><img id="caseAvatar" class="client-photo case-photo" alt=""><div><div><span id="caseName" class="name"></span> · <span id="caseAge" class="accent name"></span></div><span id="caseLabel" class="small"></span></div></div>
     <p id="caseQuote" class="case-quote"></p>
-    <div class="actions"><button class="primary" onclick="beginChat()"><span>ATENDER</span><span>→</span></button><button class="tertiary" onclick="renderMap();show('map')"><span>VOLVER</span><span>←</span></button></div>
+    <div class="actions"><button class="primary" data-action="beginChat" data-args='[]'><span>ATENDER</span><span>→</span></button><button class="tertiary" data-action="show" data-args='["map"]'><span>VOLVER</span><span>←</span></button></div>
   </section>
 
   <section id="caseReview" class="screen" hidden>
@@ -132,26 +132,26 @@
       <div><span>RESULTADO</span><strong id="caseReviewScore"></strong></div>
     </div>
     <div class="learning good case-review-learning"><p class="eyebrow">APRENDIZAJE</p><p id="caseReviewLearning" class="muted"></p></div>
-    <div class="actions"><button class="tertiary" onclick="renderMap();show('map')"><span>VOLVER AL MAPA</span><span>←</span></button></div>
+    <div class="actions"><button class="tertiary" data-action="show" data-args='["map"]'><span>VOLVER AL MAPA</span><span>←</span></button></div>
   </section>
 
   <section id="chat" class="screen" hidden>
     <div class="chat-head"><img id="chatAvatar" class="client-photo chat-photo" alt=""><div><strong id="chatName"></strong><span id="chatLabel"></span></div></div>
-    <div id="thread" class="thread" role="log" aria-live="polite" aria-relevant="additions"></div><div id="choices" class="choice-list"></div><button id="resolve" class="secondary resolve" onclick="openDecision()"></button>
+    <div id="thread" class="thread" role="log" aria-live="polite" aria-relevant="additions"></div><div id="choices" class="choice-list"></div><button id="resolve" class="secondary resolve" data-action="openDecision" data-args='[]'></button>
   </section>
 
   <section id="decision" class="screen" hidden>
     <p class="eyebrow">DECISIÓN</p><h2>¿Qué harías ahora?</h2><p class="muted">Elegí la acción que tomarías en el mostrador con lo que descubriste.</p>
     <div id="decisionPerson" class="decision-person"><img id="decisionAvatar" class="client-photo decision-photo" alt=""><div><span>CLIENTE EN CURSO</span><strong id="decisionName"></strong><small id="decisionLabel"></small></div></div>
     <div id="decisionList" class="decision-list"></div>
-    <div class="actions"><button class="tertiary" onclick="renderChat()"><span>VOLVER A LA CONVERSACIÓN</span><span>←</span></button></div>
+    <div class="actions"><button class="tertiary" data-action="renderChat" data-args='[]'><span>VOLVER A LA CONVERSACIÓN</span><span>←</span></button></div>
   </section>
 
   <section id="reaction" class="screen" hidden>
     <p class="eyebrow">CONSECUENCIA</p><div class="reaction-person"><img id="reactAvatar" class="client-photo reaction-photo" alt=""><div><strong id="reactName"></strong><span class="small">Cliente</span></div></div>
     <p id="clientLine" class="client-line"></p>
     <div id="learning" class="learning"><p class="eyebrow">APRENDIZAJE</p><div id="resultTitle" class="result"></div><p id="resultNote" class="muted"></p><p id="learnText" class="small"></p></div>
-    <div class="actions"><button id="reactionNext" class="primary" onclick="commit()"><span>CONTINUAR</span><span>→</span></button></div>
+    <div class="actions"><button id="reactionNext" class="primary" data-action="commit" data-args='[]'><span>CONTINUAR</span><span>→</span></button></div>
   </section>
 
   <section id="bossCheck" class="screen" hidden><div id="bossCheckBody"></div></section>
@@ -166,15 +166,15 @@
       <label for="pilotAlias">Nombre o alias</label>
       <input id="pilotAlias" type="text" maxlength="40" autocomplete="name" placeholder="Ej. Vendedor 01">
       <p class="small">Usalo únicamente para identificar el resultado de esta prueba.</p>
-      <button id="shareResult" class="secondary" onclick="sharePilotResult()"><span>COMPARTIR RESULTADO</span><span>↗</span></button>
-      <button id="copyResult" class="secondary" onclick="copyPilotResult()"><span>COPIAR RESULTADO</span><span>⧉</span></button>
+      <button id="shareResult" class="secondary" data-action="sharePilotResult" data-args='[]'><span>COMPARTIR RESULTADO</span><span>↗</span></button>
+      <button id="copyResult" class="secondary" data-action="copyPilotResult" data-args='[]'><span>COPIAR RESULTADO</span><span>⧉</span></button>
       <p id="copyStatus" class="copy-status" role="status"></p>
       <div id="copyFallback" class="copy-fallback" hidden><label for="resultText">Resultado para copiar</label><textarea id="resultText" readonly></textarea></div>
     </div>
-    <div class="actions"><button class="secondary" onclick="review()"><span>REVISAR TURNO</span><span>→</span></button><button class="tertiary" onclick="resetModule()"><span>REINICIAR MÓDULO</span><span>↻</span></button></div>
+    <div class="actions"><button class="secondary" data-action="review" data-args='[]'><span>REVISAR TURNO</span><span>→</span></button><button class="tertiary" data-action="resetModule" data-args='[]'><span>REINICIAR MÓDULO</span><span>↻</span></button></div>
   </section>
 
-  <section id="review" class="screen" hidden><p class="eyebrow">REVISIÓN</p><h2>Tu turno, caso por caso.</h2><div id="reviewList"></div><div class="actions"><button class="secondary" onclick="show('final')"><span>VOLVER AL RESULTADO</span><span>←</span></button></div></section>
+  <section id="review" class="screen" hidden><p class="eyebrow">REVISIÓN</p><h2>Tu turno, caso por caso.</h2><div id="reviewList"></div><div class="actions"><button class="secondary" data-action="show" data-args='["final"]'><span>VOLVER AL RESULTADO</span><span>←</span></button></div></section>
 </main>
 
 <script src="data/brands.js"></script>
@@ -193,14 +193,14 @@
 <script src="engine/legacy-scoring.js"></script>
 <script src="engine/state.js"></script>
 <script src="engine/persistence.js"></script>
+<script src="engine/legacy-conversation.js"></script>
+<script src="engine/session.js"></script>
+<script src="ui/browser-effects.js"></script>
+<script src="ui/render.js"></script>
+<script src="platform/result-sharing.js"></script>
+<script src="platform/updates.js"></script>
+<script src="ui/controller.js"></script>
 <script src="app.js"></script>
-<script>
-(() => {
-  let hiddenAt = 0;
-  const presentSplash = () => {const splash=document.getElementById('splash');if(!splash)return;splash.hidden=false;splash.classList.remove('splash-out')};
-  presentSplash();window.addEventListener('pageshow',presentSplash);window.addEventListener('load',presentSplash);
-  document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='hidden'){hiddenAt=Date.now();return}if(hiddenAt&&Date.now()-hiddenAt>3000)presentSplash()});
-})();
-</script>
+
 </body>
 </html>
