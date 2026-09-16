@@ -1,5 +1,5 @@
 window.ACADEMY_PHASE1=true;
-const RELEASE='phase2-2026-09-15-3';
+const RELEASE='phase2-2026-09-15-4';
 const AcademyApp=(()=>{
   const legacy=Academy.legacyContent({clients:window.CLIENTS||[],scenarios:window.SCENARIOS||{}});
   const clients=Academy.clientRepository(legacy.identities),visits=Academy.visitRepository(legacy.visits,clients);

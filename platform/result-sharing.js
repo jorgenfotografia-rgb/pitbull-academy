@@ -3,7 +3,7 @@ globalThis.Academy=globalThis.Academy||{};
 Academy.resultSharing=function({session,modules,visits,document,navigator,tap,RELEASE}){
 const el=id=>document.getElementById(id);
 function pilotResultText(){
-  const S=session.snapshot(),m=modules.get(S.selectedModule),s=session.summary(),mins=session.duration(),alias=(el('pilotAlias')?.value||S.pilotAlias||'Piloto').trim()||'Piloto';
+  const S=session.snapshot(),m=modules.get(S.selectedModule),s=session.summary(),mins=session.duration(),alias=(S.pilotAlias||'Piloto').trim()||'Piloto';
   return `PITBULL ACADEMY · PRE-PILOT\n${alias}\n${m.code} · ${m.title}\nGeneral: ${s.total}\nEscucha: ${s.listen}\nCriterio: ${s.criterion}\nConversación: ${s.conversation}\nRecomendación: ${s.recommendation}${mins?`\nDuración: ${mins} min`:''}\nCasos: ${S.moduleProgress[S.selectedModule].completed.length}/${visits.scenario(m.scenarioId).clients.length}\nBuild: CORE V1.1 · ${RELEASE}`;
 }
 let sharingResult=false;

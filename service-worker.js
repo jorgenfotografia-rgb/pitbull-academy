@@ -1,11 +1,52 @@
 // One validated application snapshot per release. Updates wait for an explicit UI action.
-const RELEASE='phase2-2026-09-15-3';
+const RELEASE='phase2-2026-09-15-4';
 const PREFIX='pitbull-academy-';
 const CACHE=PREFIX+RELEASE;
 const IMAGE_CACHE=CACHE+'-images';
-const ASSETS=['./engine/legacy-conversation.js','./engine/session.js','./ui/browser-effects.js','./ui/render.js','./platform/result-sharing.js','./platform/updates.js','./ui/controller.js','./engine/state.js','./engine/persistence.js','./content/legacy-m01.js','./content/clients.js','./content/visits.js','./content/modules.js','./content/catalog.js','./visuals/client-visuals.js','./engine/legacy-scoring.js','./index.html','./styles.css','./core-v1.css','./app.js','./reset-progress.js','./data/brands.js','./data/sources.js','./data/products.js','./data/modules.js','./data/clients.js','./data/scenarios/m01.js','./data/scenarios/m01-legacy-adapter.js','./manifest.webmanifest',
-'./assets/glutamina.webp','./assets/tiby-boss-check.webp','./assets/tiby-boss-review.webp','./assets/icon-192.png','./assets/icon-512.png','./assets/icon-512-maskable.png',
-'./assets/tomas.svg','./assets/luciano.svg','./assets/marina.svg','./assets/matias.svg','./assets/carla.svg','./assets/federico.svg','./assets/client-ref-camila.svg'];
+const ASSETS=[
+  "./engine/legacy-conversation.js",
+  "./engine/session.js",
+  "./ui/browser-effects.js",
+  "./ui/render.js",
+  "./platform/result-sharing.js",
+  "./platform/updates.js",
+  "./ui/controller.js",
+  "./engine/state.js",
+  "./engine/persistence.js",
+  "./content/legacy-m01.js",
+  "./content/clients.js",
+  "./content/visits.js",
+  "./content/modules.js",
+  "./content/catalog.js",
+  "./visuals/client-visuals.js",
+  "./engine/legacy-scoring.js",
+  "./index.html",
+  "./styles.css",
+  "./core-v1.css",
+  "./app.js",
+  "./reset-progress.js",
+  "./data/brands.js",
+  "./data/sources.js",
+  "./data/products.js",
+  "./data/modules.js",
+  "./data/clients.js",
+  "./data/scenarios/m01.js",
+  "./data/scenarios/m01-legacy-adapter.js",
+  "./manifest.webmanifest",
+  "./assets/glutamina.webp",
+  "./assets/tiby-boss-check.webp",
+  "./assets/tiby-boss-review.webp",
+  "./assets/icon-192.png",
+  "./assets/icon-512.png",
+  "./assets/icon-512-maskable.png",
+  "./assets/tomas.svg",
+  "./assets/luciano.svg",
+  "./assets/marina.svg",
+  "./assets/matias.svg",
+  "./assets/carla.svg",
+  "./assets/federico.svg",
+  "./assets/client-ref-camila.svg"
+];
 const assetURLs=new Set(ASSETS.map(path=>new URL(path,self.registration.scope).href));
 const shellURL=new URL('./index.html',self.registration.scope).href;
 

@@ -30,7 +30,7 @@ function worker({failure,wrongRelease=false}={}){
       if(file===failure)return new Response('missing',{status:404});
       if(!fs.existsSync(path.join(ROOT,file)))throw new Error('Offline');
       let body=fs.readFileSync(path.join(ROOT,file));
-      if(wrongRelease&&file==='index.html')body=Buffer.from(body.toString().replace('phase2-2026-09-15-3','wrong-release'));
+      if(wrongRelease&&file==='index.html')body=Buffer.from(body.toString().replace('phase2-2026-09-15-4','wrong-release'));
       return new Response(body,{status:200});
     }
   };
@@ -116,5 +116,17 @@ test('asset rebuild workflow references existing inputs and never rewrites appli
     const chunks=fs.readdirSync(path.join(ROOT,'asset-source')).filter(f=>f.startsWith(name+'.')).sort();
     const decoded=Buffer.from(chunks.map(f=>fs.readFileSync(path.join(ROOT,'asset-source',f),'utf8')).join('').replace(/\s/g,''),'base64');
     assert.deepEqual(decoded,fs.readFileSync(path.join(ROOT,'assets',name+'.webp')));
+  }
+});
+
+test('the release snapshot includes every executable script and rejects each missing extracted script',async()=>{
+  const html=fs.readFileSync(path.join(ROOT,'index.html'),'utf8');
+  const scripts=[...html.matchAll(/<script src="([^"]+)"/g)].map(m=>m[1]);
+  const w=worker();await w.event('install');
+  for(const file of scripts){
+    assert.equal(await (await w.fetch(file)).text(),fs.readFileSync(path.join(ROOT,file),'utf8'),file);
+    if(!/^(engine|content|visuals|ui|platform)\//.test(file))continue;
+    const broken=worker({failure:file});await assert.rejects(broken.event('install'),file);
+    assert.deepEqual(await broken.caches.keys(),[],file);
   }
 });

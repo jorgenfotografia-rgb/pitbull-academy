@@ -19,7 +19,11 @@ function run(name,...args){
     const product=catalog.product(session.snapshot().selectedProduct),m=(product?.moduleIds||[]).map(modules.get).find(m=>m?.status==='active');
     if(!m)return;session.command('chooseModule',m.id);name='openModule';
   }
-  const result=session.command(name,...args);if(result.tapped)effects.tap();renderer.render(result);return result.result;
+  const before=JSON.stringify([session.snapshot(),session.status()]);
+  const result=session.command(name,...args);if(result.tapped)effects.tap();
+  // A rejected stale click must not rebuild controls or disturb keyboard focus.
+  if(result.scroll!==undefined||result.follow||before!==JSON.stringify([session.snapshot(),session.status()]))renderer.render(result);
+  return result.result;
 }
 function bind(){
   if(bound)return;bound=true;

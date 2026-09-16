@@ -13,9 +13,10 @@ try{playwright=require(process.env.ACADEMY_PLAYWRIGHT_PATH||'playwright')}catch{
 const executable=process.env.ACADEMY_BROWSER_EXECUTABLE;
 const skip=!playwright?'An existing Playwright runtime is required (ACADEMY_PLAYWRIGHT_PATH).':false;
 const BASE='0835cb475ea09958137a3b490749a4daf0a3e3b5';
-const release='phase2-2026-09-15-3';
+const PHASE1='0c849518e5b5bd9f24ddefba3ab875593ff184d9';
+const release='phase2-2026-09-15-4';
 
-async function setup(t,{legacy=false,viewport={width:390,height:844}}={}){
+async function setup(t,{legacy=false,sourceRef=BASE,viewport={width:390,height:844}}={}){
   let mode=legacy?'legacy':'current';
   const oldFiles=new Map();
   const server=http.createServer((req,res)=>{
@@ -24,9 +25,10 @@ async function setup(t,{legacy=false,viewport={width:390,height:844}}={}){
     if(file.includes('..')||file.startsWith('.')){res.writeHead(404);res.end();return}
     try{
       let body;
-      if(mode==='legacy'){
-        if(!oldFiles.has(file))oldFiles.set(file,execFileSync('git',['show',`${BASE}:${file}`],{cwd:ROOT,maxBuffer:2_000_000,stdio:['ignore','pipe','ignore']}));
+      if(mode==='legacy'||mode==='rollback'){
+        if(!oldFiles.has(file))oldFiles.set(file,execFileSync('git',['show',`${sourceRef}:${file}`],{cwd:ROOT,maxBuffer:2_000_000,stdio:['ignore','pipe','ignore']}));
         body=oldFiles.get(file);
+        if(mode==='rollback'&&['app.js','service-worker.js','index.html'].includes(file))body=Buffer.from(body.toString().replaceAll('phase1-2026-09-15-1','phase1-2026-09-15-1-rollback-test'));
       }else{
         body=fs.readFileSync(path.join(ROOT,file));
         if(mode==='next'&&['app.js','service-worker.js','index.html'].includes(file))body=Buffer.from(body.toString().replaceAll(release,release+'-upgrade-test'));
@@ -160,7 +162,7 @@ test('release upgrade from audited worker preserves progress and unrelated cache
   assert.deepEqual(errors,[]);
 });
 
-test('Phase 1 update waits for explicit activation and preserves a live conversation',{skip,timeout:120000},async t=>{
+test('current release update waits for explicit activation and preserves a live conversation',{skip,timeout:120000},async t=>{
   const env=await setup(t);if(!env)return;
   const {page,url}=env;await begin(page,url);await choice(page);
   await page.waitForFunction(()=>!!navigator.serviceWorker.controller);
@@ -170,4 +172,49 @@ test('Phase 1 update waits for explicit activation and preserves a live conversa
   await Promise.all([page.waitForEvent('load'),page.locator('#applyUpdate').click()]);await enter(page);
   assert.equal(await page.evaluate(()=>RELEASE),release+'-upgrade-test');
   assert.equal(await page.locator('#thread .bubble.you').count(),1);
+});
+
+test('corrective Phase 1 rollback reads separated-runtime progress without conversion or reset',{skip,timeout:120000},async t=>{
+  const env=await setup(t,{sourceRef:PHASE1});if(!env)return;
+  const {page,url,errors}=env;await begin(page,url);await choice(page);
+  await page.waitForFunction(()=>!!navigator.serviceWorker.controller);
+  const before=await page.evaluate(()=>AcademyApp.snapshot());
+  const original=await page.evaluate(key=>localStorage.getItem(key),KEY);
+  env.setMode('rollback');
+  await page.evaluate(async()=>{const r=await navigator.serviceWorker.getRegistration();await r.update()});
+  await page.locator('#updateStatus').waitFor({state:'visible'});
+  await Promise.all([page.waitForEvent('load'),page.locator('#applyUpdate').click()]);await enter(page);
+  assert.equal(await page.evaluate(()=>RELEASE),'phase1-2026-09-15-1-rollback-test');
+  assert.deepEqual(await page.evaluate(()=>JSON.parse(JSON.stringify(S))),before);
+  assert.equal(await page.evaluate(key=>localStorage.getItem(key),KEY),original);
+  await choice(page);assert.equal(await page.locator('#thread .bubble.you').count(),2);
+  assert.deepEqual(errors,[]);
+});
+
+for(const pending of [false,true])test(`merged Phase 1 to separated release: ${pending?'pending consequence':'live conversation'} survives explicit update and offline reload`,{skip,timeout:120000},async t=>{
+  const env=await setup(t,{legacy:true,sourceRef:PHASE1});if(!env)return;
+  const {page,context,url,errors}=env;
+  await begin(page,url);await choice(page);
+  await page.waitForFunction(()=>!!navigator.serviceWorker.controller);
+  if(pending){
+    await page.locator('#resolve').click();
+    await page.locator('#decisionList button[onclick*="RECOMMEND_PRODUCT"]').click();
+  }
+  const before=await page.evaluate(()=>JSON.parse(JSON.stringify(S)));
+  const original=await page.evaluate(key=>localStorage.getItem(key),KEY);
+  await page.evaluate(()=>caches.open('unrelated-phase2-upgrade'));
+  env.setMode('current');
+  await page.evaluate(async()=>{const r=await navigator.serviceWorker.getRegistration();await r.update()});
+  await page.locator('#updateStatus').waitFor({state:'visible'});
+  assert.equal(await page.evaluate(()=>RELEASE),'phase1-2026-09-15-1');
+  await Promise.all([page.waitForEvent('load'),page.locator('#applyUpdate').click()]);await enter(page);
+  assert.equal(await page.evaluate(()=>RELEASE),release);
+  assert.deepEqual(await page.evaluate(()=>AcademyApp.snapshot()),before);
+  assert.equal(await page.evaluate(key=>localStorage.getItem(key),KEY),original);
+  assert.ok((await page.evaluate(()=>caches.keys())).includes('unrelated-phase2-upgrade'));
+  await context.setOffline(true);await page.reload();await enter(page);
+  assert.deepEqual(await page.evaluate(()=>AcademyApp.snapshot()),before);
+  if(pending){await page.locator('#reactionNext').click();assert.equal(await page.evaluate(()=>AcademyApp.snapshot().moduleProgress.m01.results.length),1)}
+  else{await choice(page);assert.equal(await page.locator('#thread .bubble.you').count(),2)}
+  assert.deepEqual(errors,[]);
 });
