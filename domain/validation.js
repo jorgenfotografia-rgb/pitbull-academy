@@ -26,8 +26,14 @@ function json(value, path, errors, parents = new Set()) {
     issue(errors, path, 'json', 'Expected a plain JSON object'); return;
   }
   parents.add(value);
-  if (Array.isArray(value) && Object.keys(value).length !== value.length) {
-    issue(errors, path, 'json', 'Sparse arrays or extra array properties are not supported');
+  if (Array.isArray(value)) {
+    const keys = Object.keys(value);
+    if (!Array.isArray(proto) || Object.getPrototypeOf(Object.getPrototypeOf(proto)) !== null) {
+      issue(errors, path, 'json', 'Expected an ordinary JSON array');
+    }
+    if (keys.length !== value.length || keys.some((key, index) => key !== String(index))) {
+      issue(errors, path, 'json', 'Sparse arrays or extra array properties are not supported');
+    }
   }
   for (const key of Reflect.ownKeys(value)) {
     if (Array.isArray(value) && key === 'length') continue;

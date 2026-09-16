@@ -61,6 +61,18 @@ test('descriptive fields do not invent numeric scales or required biographies', 
   invalid(x => { x.visits[0].facts[0].importance = 10; }, 'type');
 });
 
+test('non-JSON arrays cannot become different data during snapshot creation', () => {
+  const sparse = new Array(1); sparse.extra = 'Not index zero';
+  const extra = []; extra.extra = 'Not an array item';
+  class ExecutableArray extends Array { toJSON() { throw new Error('Do not execute'); } }
+  for (const array of [sparse, extra, new ExecutableArray()]) {
+    const bundle = fixture(); bundle.visits[0].topics = array;
+    const result = validateBundle(bundle);
+    assert.equal(result.valid, false); assert.equal(result.value, null);
+    assert.ok(result.errors.some(error => error.code === 'json'));
+  }
+});
+
 test('typed fact values validate representation independently of pedagogical type', () => {
   const cases = [['TEXT', 'x', null], ['NUMBER', 0, null], ['BOOLEAN', false, null], ['ENUM', 'yes', ['yes', 'no']],
     ['TEXT_LIST', [], null], ['ACTOR_REF', {kind: 'CLIENT', id: 'TEST-CLIENT-A'}, null],
